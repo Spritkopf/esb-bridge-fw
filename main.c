@@ -51,9 +51,6 @@
 #include "nrf_delay.h"
 #include "app_util.h"
 
-#include "nrf_log.h"
-#include "nrf_log_ctrl.h"
-#include "nrf_log_default_backends.h"
 
 #include "debug_swo.h"
 #include "nrfx_gpiote.h"
@@ -159,6 +156,7 @@ uint32_t esb_init( void )
 int main(void)
 {
     ret_code_t err_code;
+    UNUSED_VARIABLE(err_code);
 
     debug_swo_init();
 
@@ -168,7 +166,6 @@ int main(void)
     clocks_start();
 
     err_code = esb_init();
-    APP_ERROR_CHECK(err_code);
 
 	while (true)
 	{
