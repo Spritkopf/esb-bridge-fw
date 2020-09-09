@@ -1,0 +1,26 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "${default}",
+                "${env:HOME}/opt/nrf5x-sdk/nRF5_SDK_17.0.0_9d13099/**"
+            ],
+            "defines": [
+                "BOARD_PCA10056",
+                "BSP_DEFINES_ONLY",
+                "CONFIG_GPIO_AS_PINRESET",
+                "ESB_PRESENT",
+                "FLOAT_ABI_HARD",
+                "NRF52840_XXAA",
+                "ENABLE_SWO"
+            ],
+            "compilerPath": "${env:HOME}/opt/gnu-mcu-eclipse/arm-none-eabi-gcc/7.3.1-1.1-20180724-0637/bin//arm-none-eabi-gcc",
+            "cStandard": "gnu11",
+            "cppStandard": "gnu++14",
+            "intelliSenseMode": "gcc-arm"
+        }
+    ],
+    "version": 4
+}

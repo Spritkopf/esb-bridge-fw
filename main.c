@@ -55,12 +55,22 @@
 #include "debug_swo.h"
 #include "nrfx_gpiote.h"
 
+#include "com_usb.h"
+
+
 static nrf_esb_payload_t        tx_payload = NRF_ESB_CREATE_PAYLOAD(0, 0x01);
 
 static nrf_esb_payload_t        rx_payload;
 
 static uint8_t tx_flag = 0;
 static uint32_t msg_counter = 0;
+
+
+static void com_usb_event_handler(com_usb_evt_type_t evt_type)
+{
+    
+}
+
 
 
 static void button_handler(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t action){
@@ -162,8 +172,11 @@ int main(void)
 
     gpio_init();
 
-    
+    debug_swo_printf("startup\n"),
     clocks_start();
+    
+
+    com_usb_init(com_usb_event_handler);
 
     err_code = esb_init();
 

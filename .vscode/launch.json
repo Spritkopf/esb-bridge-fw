@@ -1,0 +1,32 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug (J-Link)",
+            "type": "cortex-debug",
+            "request": "launch",
+            "servertype": "jlink",
+            "cwd": "${workspaceRoot}",
+            "executable": "./_build/nrf52840_xxaa.out",
+            "device": "NRF52840_XXAA",
+            "interface": "swd",
+            "ipAddress": null,
+            "serialNumber": null,
+            "runToMain": true,
+            "swoConfig": {"cpuFrequency": 64000000,
+                          "swoFrequency": 16000000,
+                          "enabled": true,
+                          "source": "probe",
+                          "decoders": [
+                            {
+                                "type": "console",
+                                "port": 0,
+                                "label": "Trace",
+                            }
+                          ]}
+        },
+    ]
+}

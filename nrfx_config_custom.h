@@ -2904,7 +2904,7 @@
 // <7=> 7
 
 #ifndef NRFX_USBD_CONFIG_IRQ_PRIORITY
-#define NRFX_USBD_CONFIG_IRQ_PRIORITY 7
+#define NRFX_USBD_CONFIG_IRQ_PRIORITY 6
 #endif
 
 // <q> USBD_CONFIG_DMASCHEDULER_ISO_BOOST  - Give priority to isochronous transfers
