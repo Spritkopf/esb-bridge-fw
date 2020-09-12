@@ -64,11 +64,18 @@ static nrf_esb_payload_t        rx_payload;
 
 static uint8_t tx_flag = 0;
 static uint32_t msg_counter = 0;
-
+static uint8_t g_usb_rx_ready = 0;
 
 static void com_usb_event_handler(com_usb_evt_type_t evt_type)
 {
-    
+    switch(evt_type){
+    case COM_USB_EVT_PORT_OPENED:
+        break;
+    case COM_USB_EVT_PORT_CLOSED:
+        break;
+    case COM_USB_EVT_RX_DONE:
+        g_usb_rx_ready = 1;
+    }
 }
 
 
@@ -182,6 +189,10 @@ int main(void)
 
 	while (true)
 	{
+        if(g_usb_rx_ready == 1){
+            g_usb_rx_ready = 0;
+            com_usb_process();
+        }
         if(tx_flag == 1)
         {
             tx_flag = 0;

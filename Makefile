@@ -13,6 +13,8 @@ $(OUTPUT_DIRECTORY)/nrf52840_xxaa.out: \
 SRC_FILES += \
   $(PROJ_DIR)/main.c \
   $(PROJ_DIR)/com_usb.c \
+  $(PROJ_DIR)/com_usb_commands.c \
+  $(PROJ_DIR)/crc16_ccitt.c \
   $(PROJ_DIR)/debug_swo.c \
   $(SDK_ROOT)/modules/nrfx/mdk/gcc_startup_nrf52840.S \
   $(SDK_ROOT)/components/boards/boards.c \

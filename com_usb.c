@@ -1,4 +1,3 @@
-#include "com_usb.h"
 #include "nrf_error.h"
 #include "nrf_drv_usbd.h"
 #include "nrf_drv_clock.h"
@@ -8,6 +7,10 @@
 #include "app_usbd_string_desc.h"
 #include "app_usbd_cdc_acm.h"
 #include "app_usbd_serial_num.h"
+
+#include "com_usb.h"
+#include "com_usb_commands.h"
+#include "crc16_ccitt.h"
 
 #define CDC_ACM_STARTUP_DELAY_MS 100 
 
@@ -22,10 +25,13 @@
 
 
 static void cdc_acm_user_ev_handler(app_usbd_class_inst_t const *p_inst, app_usbd_cdc_acm_user_event_t event);
-
 static void usbd_user_ev_handler(app_usbd_event_type_t event);
 
 static com_usb_evt_callback_t g_com_usb_evt_callback = NULL;
+
+static uint8_t usb_tx_buffer[USB_PROTOCOL_PACKET_SIZE];
+static uint8_t usb_rx_buffer[USB_PROTOCOL_PACKET_SIZE];
+static uint8_t usb_rx_available = 0;
 
 /**
  * @brief CDC_ACM class instance
@@ -37,6 +43,14 @@ APP_USBD_CDC_ACM_GLOBAL_DEF(m_app_cdc_acm, cdc_acm_user_ev_handler, CDC_ACM_COMM
 static const app_usbd_config_t usbd_config = {.ev_state_proc = usbd_user_ev_handler};
 
 static uint8_t m_rx_buffer[RX_BUFFER_SIZE];
+
+
+static int8_t com_usb_tx(uint8_t *data, uint32_t len)
+{
+    int8_t result = app_usbd_cdc_acm_write(&m_app_cdc_acm, (const void *)data, (size_t)len);
+
+    return result;
+}
 
 
 static void usbd_user_ev_handler(app_usbd_event_type_t event)
@@ -99,23 +113,18 @@ static void cdc_acm_user_ev_handler(app_usbd_class_inst_t const *p_inst, app_usb
         /* Get amount of data transfered */
         size_t size = app_usbd_cdc_acm_rx_size(p_cdc_acm);
 
-        UNUSED_VARIABLE(size);
-        /* TODO: HANDLE DATA HERE */
-
-        /* check if received message did not fit into rx buffer and get the rest if necessary */
-
-        size_t bytes_left = app_usbd_cdc_acm_bytes_stored(p_cdc_acm);
-        while (bytes_left) {
-            uint32_t bytes_to_read = MIN(bytes_left, RX_BUFFER_SIZE);
-
-            ret = app_usbd_cdc_acm_read_any(&m_app_cdc_acm, m_rx_buffer, bytes_to_read);
-            /* TODO: HANDLE DATA HERE */
-
-            bytes_left -= bytes_to_read;
+        /* check length, sync byte */
+        if((usb_rx_available == 0) && (size == USB_PROTOCOL_PACKET_SIZE) && (m_rx_buffer[0] == USB_PROTOCOL_SYNC_BYTE)){
+            memcpy(usb_rx_buffer, m_rx_buffer, RX_BUFFER_SIZE);
+            usb_rx_available = 1;
         }
 
         /* prepare next transfer */
         ret = app_usbd_cdc_acm_read_any(&m_app_cdc_acm, m_rx_buffer, RX_BUFFER_SIZE);
+
+        if(usb_rx_available == 1){
+            g_com_usb_evt_callback(COM_USB_EVT_RX_DONE);
+        }
         break;
     }
     default:
@@ -132,12 +141,6 @@ void com_usb_init(com_usb_evt_callback_t evt_callback)
     ret_code_t ret;
     UNUSED_VARIABLE(ret);
 
-    /* Because of the power-on behavior of the Xenon board, in some cases the
-       USB inteface does not come up properly when initialized immediately.
-       A short delay before initialization solves this issue */
-       
-    //tmb_delay_ms(CDC_ACM_STARTUP_DELAY_MS);
-    
     ret = nrf_drv_clock_init();
 
     app_usbd_serial_num_generate();
@@ -155,12 +158,80 @@ void com_usb_init(com_usb_evt_callback_t evt_callback)
     }
 }
 
-
-int8_t com_usb_tx(uint8_t *data, uint32_t len)
+void com_usb_process(void)
 {
-    int8_t result;
+    usb_message_t received_message = {0};
+    usb_message_t answer_message = {0};
+    cmd_table_item_t* cmd_table_item;
 
-    result = app_usbd_cdc_acm_write(&m_app_cdc_acm, (const void *)data, (size_t)len);
+    if(usb_rx_available == 1)
+    {
+        usb_rx_available = 0;
+        
+        /* check CRC16 */
+        uint16_t crc = crc16_ccitt((void*)usb_rx_buffer, USB_PROTOCOL_PACKET_SIZE-USB_PROTOCOL_CHECKSUM_SIZE);
+        received_message.crc16 = *(uint16_t*)&usb_rx_buffer[USB_PROTOCOL_PACKET_SIZE-USB_PROTOCOL_CHECKSUM_SIZE];
+        if(crc != received_message.crc16)
+        {
+            /* CRC error, ignore message */
+            return;
+        }
 
-    return result;
+        received_message.cmd = (uint8_t)usb_rx_buffer[1];
+        received_message.payload_len = (uint8_t)usb_rx_buffer[3];
+
+        /* by default, answer will have same cmd id and no error */
+        answer_message.cmd = received_message.cmd;
+        answer_message.error = E_OK;
+        
+        if(received_message.payload_len > USB_PROTOCOL_MAX_PAYLOAD_LENGTH)
+        {
+            answer_message.error = E_PL_LEN;
+        }
+        else
+        {
+            for(uint8_t i = 0; i < received_message.payload_len; i++)
+            {
+                received_message.payload[i] = (uint8_t)usb_rx_buffer[i+USB_PROTOCOL_HEADER_SIZE];
+            }
+
+            /* lookup command */
+            cmd_table_item = com_usb_commands_lookup(received_message.cmd, received_message.payload_len);
+            if(cmd_table_item != NULL)
+            {
+                /* execute the function associated to the command */
+                cmd_table_item->cmd_fct_pnt(&received_message, &answer_message);
+            }
+            else
+            {
+                /* command not found - send ERROR */
+                
+                answer_message.error = E_NO_CMD;
+            }
+        }
+
+        /* send the answer */
+        com_usb_transmit(&answer_message);
+
+    }
+}
+
+
+void com_usb_transmit(usb_message_t* message)
+{
+    uint16_t crc = 0;
+    memset(usb_tx_buffer, 0, sizeof(usb_tx_buffer));
+
+    usb_tx_buffer[0] = USB_PROTOCOL_SYNC_BYTE;
+    usb_tx_buffer[1] = message->cmd;
+    usb_tx_buffer[2] = message->error;
+    usb_tx_buffer[3] = message->payload_len;
+    memcpy(&usb_tx_buffer[4], message->payload, 58);
+    crc = crc16_ccitt(usb_tx_buffer, USB_PROTOCOL_PACKET_SIZE-USB_PROTOCOL_CHECKSUM_SIZE);
+    usb_tx_buffer[62] = (uint8_t)(crc & 0xFF);
+    usb_tx_buffer[63] = (uint8_t)((crc>>8) & 0xFF);
+
+    /* send data */
+   
+    com_usb_tx(&usb_tx_buffer[0],USB_PROTOCOL_PACKET_SIZE);
 }
