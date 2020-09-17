@@ -2132,7 +2132,7 @@
 // <e> NRFX_TEMP_ENABLED - nrfx_temp - TEMP peripheral driver
 //==========================================================
 #ifndef NRFX_TEMP_ENABLED
-#define NRFX_TEMP_ENABLED 1
+#define NRFX_TEMP_ENABLED 0
 #endif
 
 // <o> NRFX_TEMP_DEFAULT_CONFIG_IRQ_PRIORITY  - Interrupt priority
@@ -3081,7 +3081,6 @@
 // </e>
 
 // </e>
-
 // </h>
 
 #endif // NRFX_CONFIG_CUSTOM_H__

@@ -12,65 +12,73 @@ $(OUTPUT_DIRECTORY)/nrf52840_xxaa.out: \
 # Source files common to all targets
 SRC_FILES += \
   $(PROJ_DIR)/main.c \
+  $(PROJ_DIR)/timebase.c \
+  $(PROJ_DIR)/esb.c \
   $(PROJ_DIR)/com_usb.c \
   $(PROJ_DIR)/com_usb_commands.c \
   $(PROJ_DIR)/crc16_ccitt.c \
   $(PROJ_DIR)/debug_swo.c \
   $(SDK_ROOT)/modules/nrfx/mdk/gcc_startup_nrf52840.S \
   $(SDK_ROOT)/components/boards/boards.c \
+  $(SDK_ROOT)/components/libraries/timer/app_timer.c \
   $(SDK_ROOT)/components/libraries/util/app_util_platform.c \
   $(SDK_ROOT)/components/libraries/util/nrf_assert.c \
   $(SDK_ROOT)/components/libraries/atomic/nrf_atomic.c \
   $(SDK_ROOT)/components/libraries/ringbuf/nrf_ringbuf.c \
   $(SDK_ROOT)/components/libraries/strerror/nrf_strerror.c \
+  $(SDK_ROOT)/components/libraries/sortlist/nrf_sortlist.c \
   $(SDK_ROOT)/components/libraries/util/app_error.c \
   $(SDK_ROOT)/components/libraries/util/app_error_handler_gcc.c \
   $(SDK_ROOT)/components/libraries/util/app_error_weak.c \
-  $(SDK_ROOT)/modules/nrfx/soc/nrfx_atomic.c \
-  $(SDK_ROOT)/modules/nrfx/drivers/src/nrfx_gpiote.c \
-  $(SDK_ROOT)/modules/nrfx/drivers/src/nrfx_clock.c \
-  $(SDK_ROOT)/modules/nrfx/drivers/src/nrfx_power.c \
-  $(SDK_ROOT)/modules/nrfx/mdk/system_nrf52840.c \
+  $(SDK_ROOT)/components/libraries/atomic_fifo/nrf_atfifo.c \
   $(SDK_ROOT)/components/proprietary_rf/esb/nrf_esb.c \
   $(SDK_ROOT)/components/libraries/usbd/app_usbd.c \
   $(SDK_ROOT)/components/libraries/usbd/class/cdc/acm/app_usbd_cdc_acm.c \
   $(SDK_ROOT)/components/libraries/usbd/app_usbd_core.c \
   $(SDK_ROOT)/components/libraries/usbd/app_usbd_serial_num.c \
   $(SDK_ROOT)/components/libraries/usbd/app_usbd_string_desc.c \
+  $(SDK_ROOT)/modules/nrfx/soc/nrfx_atomic.c \
+  $(SDK_ROOT)/modules/nrfx/drivers/src/nrfx_gpiote.c \
+  $(SDK_ROOT)/modules/nrfx/drivers/src/nrfx_clock.c \
+  $(SDK_ROOT)/modules/nrfx/drivers/src/nrfx_power.c \
+  $(SDK_ROOT)/modules/nrfx/drivers/src/nrfx_timer.c \
+  $(SDK_ROOT)/modules/nrfx/drivers/src/nrfx_systick.c \
+  $(SDK_ROOT)/modules/nrfx/mdk/system_nrf52840.c \
   $(SDK_ROOT)/modules/nrfx/drivers/src/nrfx_usbd.c \
-  $(SDK_ROOT)/components/libraries/atomic_fifo/nrf_atfifo.c \
   $(SDK_ROOT)/integration/nrfx/legacy/nrf_drv_clock.c \
   $(SDK_ROOT)/integration/nrfx/legacy/nrf_drv_power.c \
 
 # Include folders common to all targets
 INC_FOLDERS += \
-  $(SDK_ROOT)/components \
   $(PROJ_DIR) \
-  $(SDK_ROOT)/components/libraries/strerror \
+  $(SDK_ROOT)/components \
   $(SDK_ROOT)/components/toolchain/cmsis/include \
+  $(SDK_ROOT)/components/drivers_nrf/nrf_soc_nosd \
+  $(SDK_ROOT)/components/proprietary_rf/esb \
+  $(SDK_ROOT)/components/libraries/strerror \
   $(SDK_ROOT)/components/libraries/util \
   $(SDK_ROOT)/components/libraries/balloc \
   $(SDK_ROOT)/components/libraries/ringbuf \
-  $(SDK_ROOT)/components/proprietary_rf/esb \
   $(SDK_ROOT)/components/libraries/bsp \
   $(SDK_ROOT)/components/libraries/log \
+  $(SDK_ROOT)/components/libraries/sortlist \
   $(SDK_ROOT)/components/libraries/experimental_section_vars \
-  $(SDK_ROOT)/integration/nrfx/legacy \
-  $(SDK_ROOT)/components/libraries/delay \
-  $(SDK_ROOT)/integration/nrfx \
-  $(SDK_ROOT)/integration/nrfx/legacy \
-  $(SDK_ROOT)/components/drivers_nrf/nrf_soc_nosd \
-  $(SDK_ROOT)/components/boards \
-  $(SDK_ROOT)/modules/nrfx \
-  $(SDK_ROOT)/modules/nrfx/hal \
-  $(SDK_ROOT)/modules/nrfx/mdk \
-  $(SDK_ROOT)/modules/nrfx/drivers/include \
   $(SDK_ROOT)/components/libraries/log/src \
   $(SDK_ROOT)/components/libraries/atomic \
   $(SDK_ROOT)/components/libraries/usbd \
   $(SDK_ROOT)/components/libraries/usbd/class/cdc/acm \
   $(SDK_ROOT)/components/libraries/usbd/class/cdc \
   $(SDK_ROOT)/components/libraries/atomic_fifo \
+  $(SDK_ROOT)/components/libraries/delay \
+  $(SDK_ROOT)/components/libraries/timer \
+  $(SDK_ROOT)/components/boards \
+  $(SDK_ROOT)/integration/nrfx/legacy \
+  $(SDK_ROOT)/integration/nrfx \
+  $(SDK_ROOT)/integration/nrfx/legacy \
+  $(SDK_ROOT)/modules/nrfx \
+  $(SDK_ROOT)/modules/nrfx/hal \
+  $(SDK_ROOT)/modules/nrfx/mdk \
+  $(SDK_ROOT)/modules/nrfx/drivers/include \
   $(SDK_ROOT)/external/utf_converter \
 
 
@@ -91,6 +99,8 @@ CFLAGS += -DESB_PRESENT
 CFLAGS += -DFLOAT_ABI_HARD
 CFLAGS += -DNRF52840_XXAA
 CFLAGS += -DENABLE_SWO
+CFLAGS += -DAPP_TIMER_V2
+CFLAGS += -DAPP_TIMER_V2_RTC1_ENABLED
 CFLAGS += -mcpu=cortex-m4
 CFLAGS += -mthumb -mabi=aapcs
 CFLAGS += -Wall -Werror
