@@ -19,7 +19,8 @@
             "compilerPath": "${env:HOME}/opt/gnu-mcu-eclipse/arm-none-eabi-gcc/7.3.1-1.1-20180724-0637/bin//arm-none-eabi-gcc",
             "cStandard": "gnu11",
             "cppStandard": "gnu++14",
-            "intelliSenseMode": "gcc-arm"
+            "intelliSenseMode": "gcc-arm",
+            "browse": {"path": ["${env:HOME}/opt/nrf5x-sdk/nRF5_SDK_17.0.0_9d13099/**"]}
         }
     ],
     "version": 4

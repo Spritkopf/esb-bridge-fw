@@ -50,21 +50,18 @@
 #include "boards.h"
 #include "nrf_delay.h"
 #include "app_util.h"
-
-
-#include "debug_swo.h"
 #include "nrfx_gpiote.h"
+#include "nrf_drv_clock.h"
+
+#include "timebase.h"
+#include "esb.h"
+#include "debug_swo.h"
 
 #include "com_usb.h"
 
 
-static nrf_esb_payload_t        tx_payload = NRF_ESB_CREATE_PAYLOAD(0, 0x01);
-
-static nrf_esb_payload_t        rx_payload;
-
-static uint8_t tx_flag = 0;
-static uint32_t msg_counter = 0;
 static uint8_t g_usb_rx_ready = 0;
+static uint32_t test_flag = 0;
 
 static void com_usb_event_handler(com_usb_evt_type_t evt_type)
 {
@@ -79,35 +76,9 @@ static void com_usb_event_handler(com_usb_evt_type_t evt_type)
 }
 
 
-
 static void button_handler(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t action){
     debug_swo_printf("BUTTON PRESSED\n");
-    tx_flag = 1;
-}
-
-void nrf_esb_event_handler(nrf_esb_evt_t const * p_event)
-{
-    switch (p_event->evt_id)
-    {
-        case NRF_ESB_EVENT_TX_SUCCESS:
-            debug_swo_printf("TX SUCCESS EVENT (%lu attempts)\n", p_event->tx_attempts);
-            break;
-        case NRF_ESB_EVENT_TX_FAILED:
-            debug_swo_printf("TX FAILED EVENT\n");
-            (void) nrf_esb_flush_tx();
-            (void) nrf_esb_start_tx();
-            break;
-        case NRF_ESB_EVENT_RX_RECEIVED:
-            debug_swo_printf("RX RECEIVED EVENT\n");
-            while (nrf_esb_read_rx_payload(&rx_payload) == NRF_SUCCESS)
-            {
-                if (rx_payload.length > 0)
-                {
-                    debug_swo_printf("RX RECEIVED PAYLOAD: len %d | data: %02X \n", rx_payload.length, rx_payload.data[0]);
-                }
-            }
-            break;
-    }
+    test_flag = 1;
 }
 
 
@@ -117,56 +88,24 @@ void clocks_start( void )
     NRF_CLOCK->TASKS_HFCLKSTART = 1;
 
     while (NRF_CLOCK->EVENTS_HFCLKSTARTED == 0);
+
+    nrf_drv_clock_init();
+    nrf_drv_clock_lfclk_request(NULL);
 }
 
 
 void gpio_init( void )
 {
-    //nrf_gpio_range_cfg_output(8, 15);
-    //bsp_board_init(BSP_INIT_LEDS);
     nrfx_gpiote_pin_t button_pin = NRF_GPIO_PIN_MAP(0, 11);
     nrfx_gpiote_in_config_t button_cfg = NRFX_GPIOTE_CONFIG_IN_SENSE_HITOLO(false);
     button_cfg.pull = NRF_GPIO_PIN_PULLUP;
     nrfx_gpiote_init();
     nrfx_gpiote_in_init(button_pin, &button_cfg, button_handler);
     nrfx_gpiote_in_event_enable(button_pin, true);
-}
 
-
-uint32_t esb_init( void )
-{
-    uint32_t err_code;
-    uint8_t base_addr_0[4] = {0xE7, 0xE7, 0xE7, 0xE7};
-    uint8_t base_addr_1[4] = {0xC2, 0xC2, 0xC2, 0xC2};
-    uint8_t addr_prefix[8] = {0xE7, 0xC2, 0xC3, 0xC4, 0xC5, 0xC6, 0xC7, 0xC8 };
-
-    nrf_esb_config_t nrf_esb_config         = NRF_ESB_DEFAULT_CONFIG;
-    nrf_esb_config.protocol                 = NRF_ESB_PROTOCOL_ESB_DPL;
-    nrf_esb_config.retransmit_delay         = 600;
-    nrf_esb_config.bitrate                  = NRF_ESB_BITRATE_1MBPS;
-    nrf_esb_config.event_handler            = nrf_esb_event_handler;
-    nrf_esb_config.mode                     = NRF_ESB_MODE_PTX;
-    nrf_esb_config.selective_auto_ack       = false;
-
-    err_code = nrf_esb_init(&nrf_esb_config);
-    VERIFY_SUCCESS(err_code);
-
-    err_code = nrf_esb_set_rf_channel(40);
-    VERIFY_SUCCESS(err_code);
-
-    err_code = nrf_esb_set_address_length(5);
-    VERIFY_SUCCESS(err_code);
-
-    err_code = nrf_esb_set_base_address_0(base_addr_0);
-    VERIFY_SUCCESS(err_code);
-
-    err_code = nrf_esb_set_base_address_1(base_addr_1);
-    VERIFY_SUCCESS(err_code);
-
-    err_code = nrf_esb_set_prefixes(addr_prefix, 1);
-    VERIFY_SUCCESS(err_code);
-
-    return err_code;
+    /* LED */
+    nrf_gpio_cfg_output(NRF_GPIO_PIN_MAP(1, 12));
+    nrf_gpio_pin_clear(NRF_GPIO_PIN_MAP(1, 12));
 }
 
 
@@ -181,31 +120,39 @@ int main(void)
 
     debug_swo_printf("startup\n"),
     clocks_start();
+
+    timebase_init();
     
+    nrf_gpio_pin_set(NRF_GPIO_PIN_MAP(1, 12));
 
     com_usb_init(com_usb_event_handler);
 
     err_code = esb_init();
 
+    uint8_t tx = 1;
+    uint8_t rx[32] = {0};
+    uint8_t rx_len = 0;
 	while (true)
 	{
-        if(g_usb_rx_ready == 1){
-            g_usb_rx_ready = 0;
-            com_usb_process();
-        }
-        if(tx_flag == 1)
-        {
-            tx_flag = 0;
-            tx_payload.noack = false;
-            tx_payload.data[0] = msg_counter++;
-            if (nrf_esb_write_payload(&tx_payload) == NRF_SUCCESS)
-            {
-                debug_swo_printf("Sending success\n");
-            }
-            else
-            {
-                debug_swo_printf("Sending packet failed\n");
-            }
+        // if(g_usb_rx_ready == 1){
+        //     g_usb_rx_ready = 0;
+        //     com_usb_process();
+        // }
+        timebase_delay_ms(1000);
+        nrf_gpio_pin_toggle(NRF_GPIO_PIN_MAP(1, 12));
+        
+        uint32_t millis = 0;
+        timebase_get_tick(&millis, NULL);
+    
+
+        uint32_t bla = 1;
+        if(bla == test_flag){
+            test_flag = 0;
+
+
+            int8_t result = esb_transmit_blocking(&tx,1,rx,&rx_len);
+
+            debug_swo_printf("TX result: %i", result);
         }
 
     }
