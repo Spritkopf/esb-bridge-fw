@@ -8,6 +8,13 @@
 */
 int8_t esb_init(void);
 
+/* Set TX target address
+ * returns 0 if OK, otherwise -1
+*/
+int8_t esb_set_tx_address(const uint8_t tx_addr[5]);
+
+
+
 /* transmit data, wait blocking for ACK payload 
  * returns:
  *  0  - OK

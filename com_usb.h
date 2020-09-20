@@ -15,7 +15,7 @@ typedef enum
     E_OK      = 0x00,   /* no error */
     E_NO_CMD  = 0x10,   /* command not found */
     E_PL_LEN  = 0x40,   /* payload length too large or too short */
-    E_HAL     = 0x80,   /* HAL error (SPI read/write fail) */ 
+    E_ESB     = 0x80,   /* Failed to execute ESB function */ 
 } usb_error_t;
 
 typedef struct 

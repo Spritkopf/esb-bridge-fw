@@ -2,8 +2,11 @@
 #include <string.h>
 #include "com_usb_commands.h"
 #include "com_usb.h"
-
+#include "nrf.h"
+#include "nrf_esb.h"
+#include "nrf_error.h"
 #include "debug_swo.h"
+#include "esb.h"
 
 #define PAYLOAD_LEN_DYNAMIC 0xFF
 
@@ -23,11 +26,16 @@ void cmd_fct_test(const usb_message_t* message, usb_message_t* answer)
     return;
 }
 
+/* Get FW Version
+ * payload length must be 0
+ * answer payload: answer payload
+ * answer error: E_OK if OK, otherwise E_ESB
+ */
 void cmd_fct_get_version(const usb_message_t* message, usb_message_t* answer)
 {
     answer->payload_len = 3;
-    answer->payload[0] = 1;
-    answer->payload[1] = 0;
+    answer->payload[0] = 0;
+    answer->payload[1] = 1;
     answer->payload[2] = 0;
     
     return;
@@ -37,30 +45,38 @@ void cmd_fct_get_version(const usb_message_t* message, usb_message_t* answer)
 /* Transfer a ESB package and return the answer payload
  * The message must contain at least 6 bytes:
  * payload[0]:    Target address
- * payload[1-N]:    payload to send (5 <= N <= 36)
+ * payload[1-N]:    payload to send (N max 32)
  * payload length determines how much bytes will be written (N-5, because of target address)
  * answer payload: answer payload
+ * answer error: E_OK if OK, otherwise E_ESB
  */
 void cmd_fct_transfer(const usb_message_t* message, usb_message_t* answer)
 {
-    answer->error = 0;    
-  #if 0  
-    if(message->payload_len < 2)
+    if((message->payload_len < 2) || (message->payload_len > NRF_ESB_MAX_PAYLOAD_LENGTH +1))
     {
         /* message must contain at least 2 bytes */
         answer->error = E_PL_LEN;
     }
     else
     {
-        result = nrf_com_transfer_blocking(&(message->payload[0]), &(message->payload[5]),message->payload_len-5,answer->payload,&(answer->payload_len));
-        //result = ptx_transfer_blocking(message->payload,message->payload_len,answer->payload,&(answer->payload_len));
-
-        if(result != 0)
+        nrf_esb_payload_t tx_payload = {
+            .pipe = 0,
+            .length = message->payload_len-1,
+            .noack = false
+        };
+        memcpy(tx_payload.data, &(message->payload[1]), tx_payload.length);
+        
+        if (nrf_esb_write_payload(&tx_payload) == NRF_SUCCESS)
         {
-            answer->error = result*(-1);
-        }    
+            debug_swo_printf("Sending success\n");
+            answer->error = E_OK;
+        }
+        else
+        {
+            debug_swo_printf("Sending packet failed\n");
+            answer->error = E_ESB;
+        }
     }
-    #endif
     
 
     return;
@@ -72,9 +88,10 @@ void cmd_fct_transfer(const usb_message_t* message, usb_message_t* answer)
  */
 void cmd_fct_set_tx_addr(const usb_message_t* message, usb_message_t* answer)
 {
-    //nrf_ptx_set_address(message->payload);
-
     answer->error = 0;    
+    if(esb_set_tx_address(message->payload) != 0){
+        answer->error = E_ESB;    
+    }
 
     return;
 }
@@ -102,7 +119,7 @@ cmd_table_item_t cmd_table[] =
     {CMD_TEST,          PAYLOAD_LEN_DYNAMIC,  cmd_fct_test},
     {CMD_VERSION,       0,                    cmd_fct_get_version},
     //{CMD_TRANSFER,      PAYLOAD_LEN_DYNAMIC,  cmd_fct_transfer},
-    //{CMD_SET_TX_ADDR,   5,                    cmd_fct_set_tx_addr},
+    {CMD_SET_TX_ADDR,   5,                    cmd_fct_set_tx_addr},
 
     
     /* last entry NULL-terminator */

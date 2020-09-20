@@ -82,6 +82,17 @@ int8_t esb_init(void)
     return (0);
 }
 
+int8_t esb_set_tx_address(const uint8_t tx_addr[5])
+{
+    if(nrf_esb_set_base_address_0(tx_addr) != NRF_SUCCESS){
+        return (-1);
+    }
+    if(nrf_esb_set_prefixes(&(tx_addr[4]), 1) != NRF_SUCCESS){
+        return (-1);
+    }
+
+    return (0);
+}
 
 int8_t esb_transmit_blocking(uint8_t *p_tx_data, uint8_t tx_len, uint8_t *p_rx_data, uint8_t *p_rx_len)
 {

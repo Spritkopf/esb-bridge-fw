@@ -134,21 +134,13 @@ int main(void)
     uint8_t rx_len = 0;
 	while (true)
 	{
-        // if(g_usb_rx_ready == 1){
-        //     g_usb_rx_ready = 0;
-        //     com_usb_process();
-        // }
-        timebase_delay_ms(1000);
-        nrf_gpio_pin_toggle(NRF_GPIO_PIN_MAP(1, 12));
-        
-        uint32_t millis = 0;
-        timebase_get_tick(&millis, NULL);
-    
+        if(g_usb_rx_ready == 1){
+            g_usb_rx_ready = 0;
+            com_usb_process();
+        }
 
-        uint32_t bla = 1;
-        if(bla == test_flag){
+        if(1 == test_flag){
             test_flag = 0;
-
 
             int8_t result = esb_transmit_blocking(&tx,1,rx,&rx_len);
 
