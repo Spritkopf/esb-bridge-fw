@@ -8,6 +8,7 @@ typedef enum
 {
     CMD_VERSION     = 0x10,   /* Get firmware version */
     CMD_SET_TX_ADDR = 0x20,
+    CMD_TRANSFER    = 0x30,
     CMD_TEST        = 0x61,   /* test command, do not use */
     CMD_IRQ         = 0x80,   /* interrupt callback, only from device to host */
 } usb_cmd_t;

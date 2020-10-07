@@ -11,6 +11,7 @@
 #include "com_usb.h"
 #include "com_usb_commands.h"
 #include "crc16_ccitt.h"
+#include "timebase.h"
 
 #define CDC_ACM_STARTUP_DELAY_MS 100 
 
@@ -143,6 +144,8 @@ void com_usb_init(com_usb_evt_callback_t evt_callback)
 
     ret = nrf_drv_clock_init();
 
+    timebase_delay_ms(100);
+    
     app_usbd_serial_num_generate();
 
     /* Initialize USB */

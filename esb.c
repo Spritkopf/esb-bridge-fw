@@ -56,27 +56,27 @@ int8_t esb_init(void)
     nrf_esb_config.selective_auto_ack       = false;
 
     if(nrf_esb_init(&nrf_esb_config) != NRF_SUCCESS){
-        return (-1);
+        return (ESB_ERR_HAL);
     }
 
     if(nrf_esb_set_rf_channel(40) != NRF_SUCCESS){
-        return (-1);
+        return (ESB_ERR_HAL);
     }
 
     if(nrf_esb_set_address_length(5) != NRF_SUCCESS){
-        return (-1);
+        return (ESB_ERR_HAL);
     }
 
     if(nrf_esb_set_base_address_0(base_addr_0) != NRF_SUCCESS){
-        return (-1);
+        return (ESB_ERR_HAL);
     }
 
     if(nrf_esb_set_base_address_1(base_addr_1) != NRF_SUCCESS){
-        return (-1);
+        return (ESB_ERR_HAL);
     }
 
     if(nrf_esb_set_prefixes(addr_prefix, 1) != NRF_SUCCESS){
-        return (-1);
+        return (ESB_ERR_HAL);
     }
 
     return (0);
@@ -85,24 +85,24 @@ int8_t esb_init(void)
 int8_t esb_set_tx_address(const uint8_t tx_addr[5])
 {
     if(nrf_esb_set_base_address_0(tx_addr) != NRF_SUCCESS){
-        return (-1);
+        return (ESB_ERR_HAL);
     }
     if(nrf_esb_set_prefixes(&(tx_addr[4]), 1) != NRF_SUCCESS){
-        return (-1);
+        return (ESB_ERR_HAL);
     }
 
-    return (0);
+    return (ESB_ERR_OK);
 }
 
-int8_t esb_transmit_blocking(uint8_t *p_tx_data, uint8_t tx_len, uint8_t *p_rx_data, uint8_t *p_rx_len)
+int8_t esb_transmit_blocking(const uint8_t *p_tx_data, uint8_t tx_len, uint8_t *p_rx_data, uint8_t *p_rx_len)
 {
 
     if((p_tx_data == NULL) || (p_rx_data == NULL) || (p_rx_len == NULL)){
-        return (-3);
+        return (ESB_ERR_PARAM);
     }
 
     if(tx_len > NRF_ESB_MAX_PAYLOAD_LENGTH){
-        return (-2);
+        return (ESB_ERR_SIZE);
     }   
     nrf_esb_payload_t tx_payload = {
             .pipe = 0,
@@ -117,7 +117,7 @@ int8_t esb_transmit_blocking(uint8_t *p_tx_data, uint8_t tx_len, uint8_t *p_rx_d
     if (nrf_esb_write_payload(&tx_payload) != NRF_SUCCESS)
     {
         debug_swo_printf("Sending packet failed\n");
-        return (-1);
+        return (ESB_ERR_HAL);
     }
 
     /* wait blocking for payload */
@@ -126,7 +126,7 @@ int8_t esb_transmit_blocking(uint8_t *p_tx_data, uint8_t tx_len, uint8_t *p_rx_d
         if(timebase_timeout_check()){
             /* timeout*/
             debug_swo_printf("Timeout waiting for answer");
-            return (-4);
+            return (ESB_ERR_TIMEOUT);
         }
     }
 
@@ -135,5 +135,5 @@ int8_t esb_transmit_blocking(uint8_t *p_tx_data, uint8_t tx_len, uint8_t *p_rx_d
 
     debug_swo_printf("RX RECEIVED PAYLOAD: len %d | data: %02X \n", rx_payload.length, rx_payload.data[0]);
 
-    return (0);
+    return (ESB_ERR_OK);
 }
