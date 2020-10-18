@@ -108,6 +108,15 @@ void gpio_init( void )
     nrf_gpio_pin_clear(NRF_GPIO_PIN_MAP(1, 12));
 }
 
+void rf_antenna_init(void)
+{
+    nrf_gpio_cfg_output(NRF_GPIO_PIN_MAP(0, 24));
+    nrf_gpio_cfg_output(NRF_GPIO_PIN_MAP(0, 25));
+
+    /* Enable PCB antenna */
+    nrf_gpio_pin_set(NRF_GPIO_PIN_MAP(0, 24));
+    nrf_gpio_pin_clear(NRF_GPIO_PIN_MAP(0, 25));
+}
 
 int main(void)
 {
@@ -123,7 +132,10 @@ int main(void)
 
     timebase_init();
     
+    /* turn user LED on*/
     nrf_gpio_pin_set(NRF_GPIO_PIN_MAP(1, 12));
+
+    rf_antenna_init();
 
     com_usb_init(com_usb_event_handler);
 

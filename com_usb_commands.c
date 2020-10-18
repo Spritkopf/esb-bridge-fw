@@ -38,7 +38,7 @@ void cmd_fct_get_version(const usb_message_t* message, usb_message_t* answer)
 {
     answer->payload_len = 3;
     answer->payload[0] = 0;
-    answer->payload[1] = 1;
+    answer->payload[1] = 2;
     answer->payload[2] = 0;
     
     return;
