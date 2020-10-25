@@ -8,11 +8,28 @@
 #include "timebase.h"
 #include "debug_swo.h"
 
-#define ESB_TX_TIMEOUT_MS   100
+#define ESB_XFER_TIMEOUT_MS   100     /* timeout waiting for an answer in blocking XFER */
+#define ESB_DEFAULT_CHANNEL 40
+
+#define ESB_PIPE_DIRECT_COMM    0
+#define ESB_PIPE_LISTENING      1
 
 static nrf_esb_payload_t        rx_payload;
+static nrf_esb_payload_t        tx_payload;
 
-static uint8_t rx_payload_available = 0;
+static volatile uint8_t rx_payload_available = 0;
+
+static nrf_esb_config_t g_nrf_esb_config = NRF_ESB_DEFAULT_CONFIG;
+
+static volatile uint8_t g_initialized = 0;
+static volatile uint8_t g_tx_busy = 0;
+
+static esb_listener_callback_t g_listener_callback = NULL;
+
+static uint8_t g_tx_addr[5] = {0xC2, 0xC2, 0xC2, 0xC2, 0x01};
+static uint8_t g_listening_addr[5] = {0xE7, 0xE7, 0xE7, 0xE7, 0xE7};
+
+static int8_t esb_reinit(nrf_esb_mode_t esb_mode);
 
 static void nrf_esb_event_handler(nrf_esb_evt_t const * p_event)
 {
@@ -20,9 +37,12 @@ static void nrf_esb_event_handler(nrf_esb_evt_t const * p_event)
     {
         case NRF_ESB_EVENT_TX_SUCCESS:
             debug_swo_printf("TX SUCCESS EVENT (%lu attempts)\n", p_event->tx_attempts);
+            g_tx_busy = 0;
+            esb_reinit(NRF_ESB_MODE_PRX);
             break;
         case NRF_ESB_EVENT_TX_FAILED:
             debug_swo_printf("TX FAILED EVENT\n");
+            g_tx_busy = 0;
             (void) nrf_esb_flush_tx();
             (void) nrf_esb_start_tx();
             break;
@@ -32,36 +52,82 @@ static void nrf_esb_event_handler(nrf_esb_evt_t const * p_event)
             {
                 if (rx_payload.length > 0)
                 {
-                    rx_payload_available = 1;
+                    if(rx_payload.pipe == ESB_PIPE_LISTENING){
+                        /* action for incoming messages for general listening address */
+                        if(g_listener_callback != NULL){
+                            g_listener_callback(rx_payload.data, rx_payload.length);
+                        }
+                        
+                    }
+                    if(rx_payload.pipe == ESB_PIPE_DIRECT_COMM){
+                        /* action for incoming messages as direct answer to a sent message */
+                        rx_payload_available = 1;
+                    }
                 }
             }
+            nrf_esb_flush_rx();
             break;
     }
 }
 
-
-
-int8_t esb_init(void)
+static int8_t esb_reinit(nrf_esb_mode_t esb_mode)
 {
-    uint8_t base_addr_0[4] = {0xE7, 0xE7, 0xE7, 0xE7};
-    uint8_t base_addr_1[4] = {0xC2, 0xC2, 0xC2, 0xC2};
-    uint8_t addr_prefix[8] = {0xE7, 0xC2, 0xC3, 0xC4, 0xC5, 0xC6, 0xC7, 0xC8 };
+    nrf_esb_stop_rx();
+    nrf_esb_disable();
+    g_nrf_esb_config.mode = esb_mode;
+    nrf_esb_init(&g_nrf_esb_config);
 
-    nrf_esb_config_t nrf_esb_config         = NRF_ESB_DEFAULT_CONFIG;
-    nrf_esb_config.tx_output_power          = NRF_ESB_TX_POWER_4DBM;
-    nrf_esb_config.protocol                 = NRF_ESB_PROTOCOL_ESB_DPL;
-    nrf_esb_config.retransmit_delay         = 600;
-    nrf_esb_config.retransmit_count         = 10;
-    nrf_esb_config.bitrate                  = NRF_ESB_BITRATE_1MBPS;
-    nrf_esb_config.event_handler            = nrf_esb_event_handler;
-    nrf_esb_config.mode                     = NRF_ESB_MODE_PTX;
-    nrf_esb_config.selective_auto_ack       = false;
-
-    if(nrf_esb_init(&nrf_esb_config) != NRF_SUCCESS){
+    /* set pipeline addresses again because they are reset in nrf_esb_init() */
+    uint8_t addr_prefix[2] = {g_tx_addr[4], g_listening_addr[4]};
+    if(nrf_esb_set_address_length(5) != NRF_SUCCESS){
         return (ESB_ERR_HAL);
     }
 
-    if(nrf_esb_set_rf_channel(40) != NRF_SUCCESS){
+    if(nrf_esb_set_base_address_0(g_tx_addr) != NRF_SUCCESS){
+        return (ESB_ERR_HAL);
+    }
+
+    if(nrf_esb_set_base_address_1(g_listening_addr) != NRF_SUCCESS){
+        return (ESB_ERR_HAL);
+    }
+
+    if(nrf_esb_set_prefixes(addr_prefix, 2) != NRF_SUCCESS){
+        return (ESB_ERR_HAL);
+    }
+
+    if(esb_mode == NRF_ESB_MODE_PTX){
+        nrf_esb_start_tx();
+    }else if (esb_mode == NRF_ESB_MODE_PRX){
+        nrf_esb_start_rx();
+    }
+    return (ESB_ERR_OK);
+}
+    
+int8_t esb_init(const uint8_t listening_addr[5], esb_listener_callback_t listener_callback)
+{
+    if(listening_addr == NULL){
+        return (ESB_ERR_PARAM);
+    }
+
+    memcpy(g_listening_addr, listening_addr, 5);
+    uint8_t addr_prefix[2] = {g_tx_addr[4], g_listening_addr[4]};
+    
+    g_nrf_esb_config.protocol                 = NRF_ESB_PROTOCOL_ESB_DPL;
+    g_nrf_esb_config.mode                     = NRF_ESB_MODE_PRX;
+    g_nrf_esb_config.event_handler            = nrf_esb_event_handler;
+    g_nrf_esb_config.bitrate                  = NRF_ESB_BITRATE_1MBPS;
+    g_nrf_esb_config.crc                      = NRF_ESB_CRC_16BIT;
+    g_nrf_esb_config.tx_output_power          = NRF_ESB_TX_POWER_4DBM;
+    g_nrf_esb_config.retransmit_delay         = 600;
+    g_nrf_esb_config.retransmit_count         = 10;
+    g_nrf_esb_config.tx_mode                  = NRF_ESB_TXMODE_AUTO;
+    g_nrf_esb_config.selective_auto_ack       = false;
+
+    if(nrf_esb_init(&g_nrf_esb_config) != NRF_SUCCESS){
+        return (ESB_ERR_HAL);
+    }
+
+    if(nrf_esb_set_rf_channel(ESB_DEFAULT_CHANNEL) != NRF_SUCCESS){
         return (ESB_ERR_HAL);
     }
 
@@ -69,36 +135,47 @@ int8_t esb_init(void)
         return (ESB_ERR_HAL);
     }
 
-    if(nrf_esb_set_base_address_0(base_addr_0) != NRF_SUCCESS){
+    if(nrf_esb_set_base_address_0(g_tx_addr) != NRF_SUCCESS){
         return (ESB_ERR_HAL);
     }
 
-    if(nrf_esb_set_base_address_1(base_addr_1) != NRF_SUCCESS){
+    if(nrf_esb_set_base_address_1(g_listening_addr) != NRF_SUCCESS){
         return (ESB_ERR_HAL);
     }
 
-    if(nrf_esb_set_prefixes(addr_prefix, 1) != NRF_SUCCESS){
+    if(nrf_esb_set_prefixes(addr_prefix, 2) != NRF_SUCCESS){
         return (ESB_ERR_HAL);
     }
 
-    return (0);
+    if(nrf_esb_start_rx() != NRF_SUCCESS){
+        return (ESB_ERR_HAL);
+    }
+
+    if(listener_callback != NULL){
+        g_listener_callback = listener_callback;
+    }
+
+    g_initialized = 1;
+    return (ESB_ERR_OK);
 }
 
-int8_t esb_set_tx_address(const uint8_t tx_addr[5])
+void esb_set_tx_address(const uint8_t tx_addr[5])
 {
-    if(nrf_esb_set_base_address_0(tx_addr) != NRF_SUCCESS){
-        return (ESB_ERR_HAL);
-    }
-    if(nrf_esb_set_prefixes(&(tx_addr[4]), 1) != NRF_SUCCESS){
+    memcpy(g_tx_addr, tx_addr, 5);
+}
+
+int8_t esb_set_rf_channel(const uint8_t channel)
+{
+    if(nrf_esb_set_rf_channel(channel) != NRF_SUCCESS){
         return (ESB_ERR_HAL);
     }
 
     return (ESB_ERR_OK);
 }
 
-int8_t esb_transmit_blocking(const uint8_t *p_tx_data, uint8_t tx_len, uint8_t *p_rx_data, uint8_t *p_rx_len)
+int8_t esb_xfer_blocking(const uint8_t *p_tx_data, uint8_t tx_len, uint8_t *p_rx_data, uint8_t *p_rx_len)
 {
-
+    int8_t result = 0;
     if((p_tx_data == NULL) || (p_rx_data == NULL) || (p_rx_len == NULL)){
         return (ESB_ERR_PARAM);
     }
@@ -106,24 +183,18 @@ int8_t esb_transmit_blocking(const uint8_t *p_tx_data, uint8_t tx_len, uint8_t *
     if(tx_len > NRF_ESB_MAX_PAYLOAD_LENGTH){
         return (ESB_ERR_SIZE);
     }   
-    nrf_esb_payload_t tx_payload = {
-            .pipe = 0,
-            .length = tx_len,
-            .noack = false
-    };
-    memcpy(tx_payload.data, p_tx_data, tx_len);
-    memset(rx_payload.data, 0, sizeof(rx_payload.data));
     
     rx_payload_available = 0;
 
-    if (nrf_esb_write_payload(&tx_payload) != NRF_SUCCESS)
+    result = nrf_esb_send(p_tx_data, tx_len);
+    if (result != NRF_SUCCESS)
     {
         debug_swo_printf("Sending packet failed\n");
         return (ESB_ERR_HAL);
     }
 
     /* wait blocking for payload */
-    timebase_timeout_start(ESB_TX_TIMEOUT_MS);
+    timebase_timeout_start(ESB_XFER_TIMEOUT_MS);
     while(rx_payload_available == 0){
         if(timebase_timeout_check()){
             /* timeout*/
@@ -135,7 +206,30 @@ int8_t esb_transmit_blocking(const uint8_t *p_tx_data, uint8_t tx_len, uint8_t *
     memcpy(p_rx_data, rx_payload.data, rx_payload.length);
     *p_rx_len = rx_payload.length;
 
-    debug_swo_printf("RX RECEIVED PAYLOAD: len %d | data: %02X \n", rx_payload.length, rx_payload.data[0]);
+    debug_swo_printf("ANSWER PAYLOAD: len %d | data[0]: %02X \n", rx_payload.length, rx_payload.data[0]);
 
+    return (ESB_ERR_OK);
+}
+
+int8_t nrf_esb_send(const uint8_t *payload, uint32_t payload_length)
+{
+    if(g_initialized != 1){
+        return (ESB_ERR_INIT);
+    }
+    if(payload == NULL){
+        return (ESB_ERR_PARAM);
+    }
+
+    while(g_tx_busy==1); /* wait until radio is ready */
+    esb_reinit(NRF_ESB_MODE_PTX);
+    memcpy(tx_payload.data, payload, payload_length);
+    tx_payload.length = payload_length;
+    tx_payload.pipe = 0;
+    if(nrf_esb_write_payload(&tx_payload) == NRF_SUCCESS){
+        g_tx_busy = 1;  
+    }else{
+        return (ESB_ERR_HAL);
+    }
+    
     return (ESB_ERR_OK);
 }

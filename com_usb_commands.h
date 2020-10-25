@@ -9,8 +9,10 @@ typedef enum
     CMD_VERSION     = 0x10,   /* Get firmware version */
     CMD_SET_TX_ADDR = 0x20,
     CMD_TRANSFER    = 0x30,
+    CMD_SEND        = 0x31,   /* Send a message */
     CMD_TEST        = 0x61,   /* test command, do not use */
     CMD_IRQ         = 0x80,   /* interrupt callback, only from device to host */
+    CMD_RX          = 0x81,   /* callback from incoming ESB message */
 } usb_cmd_t;
 
 /*

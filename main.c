@@ -58,10 +58,25 @@
 #include "debug_swo.h"
 
 #include "com_usb.h"
+#include "com_usb_commands.h"
 
 
 static uint8_t g_usb_rx_ready = 0;
 static uint32_t test_flag = 0;
+
+static uint8_t esb_listener_address[5] = {0xDE,0xAD,0xBE,0xEF,0x02};
+
+static void esb_listener_callback(uint8_t *payload, uint8_t payload_length)
+{
+    usb_message_t msg = {
+        .cmd = CMD_RX,
+        .error = E_OK,
+        .payload_len=payload_length
+    };
+    memcpy(msg.payload, payload, payload_length);
+
+    com_usb_transmit(&msg);
+}
 
 static void com_usb_event_handler(com_usb_evt_type_t evt_type)
 {
@@ -89,8 +104,8 @@ void clocks_start( void )
 
     while (NRF_CLOCK->EVENTS_HFCLKSTARTED == 0);
 
-    nrf_drv_clock_init();
-    nrf_drv_clock_lfclk_request(NULL);
+    //nrf_drv_clock_init();
+    //nrf_drv_clock_lfclk_request(NULL);
 }
 
 
@@ -139,11 +154,11 @@ int main(void)
 
     com_usb_init(com_usb_event_handler);
 
-    err_code = esb_init();
+    err_code = esb_init(esb_listener_address, esb_listener_callback);
 
-    uint8_t tx = 1;
-    uint8_t rx[32] = {0};
-    uint8_t rx_len = 0;
+    //uint8_t tx = 1;
+    //uint8_t rx[32] = {0};
+    //uint8_t rx_len = 0;
 	while (true)
 	{
         if(g_usb_rx_ready == 1){
@@ -154,9 +169,9 @@ int main(void)
         if(1 == test_flag){
             test_flag = 0;
 
-            int8_t result = esb_transmit_blocking(&tx,1,rx,&rx_len);
+            //int8_t result = esb_transmit_blocking(&tx,1,rx,&rx_len);
 
-            debug_swo_printf("TX result: %i", result);
+            //debug_swo_printf("TX result: %i", result);
         }
 
     }

@@ -54,6 +54,7 @@ void cmd_fct_get_version(const usb_message_t* message, usb_message_t* answer)
  */
 void cmd_fct_transfer(const usb_message_t* message, usb_message_t* answer)
 {
+    #if 0
     if((message->payload_len < 1) || (message->payload_len > NRF_ESB_MAX_PAYLOAD_LENGTH))
     {
         /* invalid payload length */
@@ -63,7 +64,7 @@ void cmd_fct_transfer(const usb_message_t* message, usb_message_t* answer)
     {
         //uint8_t esb_answer_payload[NRF_ESB_MAX_PAYLOAD_LENGTH] = {0};
         //uint8_t esb_answer_len = 0;
-        int8_t result = esb_transmit_blocking(message->payload, message->payload_len, answer->payload, &(answer->payload_len));
+        int8_t result = esb_xfer_blocking(message->payload, message->payload_len, answer->payload, &(answer->payload_len));
 
         if (result == ESB_ERR_OK)
         {
@@ -82,9 +83,26 @@ void cmd_fct_transfer(const usb_message_t* message, usb_message_t* answer)
             answer->error = CMD_E_ESB;
         }
     }
+    #endif
     return;
 }
 
+
+/* Transmit a ESB package
+ * The message payload must be >=1 and <= 32 :
+ * answer error: E_OK if OK, otherwise E_ESB
+ * 
+ * Note: set TX address beforehand with command CMD_SET_TX_ADDR
+ */
+void cmd_fct_send(const usb_message_t* message, usb_message_t* answer)
+{
+    answer->error = 0;    
+    if(nrf_esb_send(message->payload, message->payload_len) != 0){
+        answer->error = CMD_E_ESB;    
+    }
+
+    return;
+}
 /* Set address of TX Pipeline
  * payload:    5 bytes TX pipeline address
  * No answer payload
@@ -92,10 +110,8 @@ void cmd_fct_transfer(const usb_message_t* message, usb_message_t* answer)
 void cmd_fct_set_tx_addr(const usb_message_t* message, usb_message_t* answer)
 {
     answer->error = 0;    
-    if(esb_set_tx_address(message->payload) != 0){
-        answer->error = CMD_E_ESB;    
-    }
-
+    esb_set_tx_address(message->payload);
+    
     return;
 }
 
@@ -123,6 +139,7 @@ cmd_table_item_t cmd_table[] =
     {CMD_VERSION,       0,                    cmd_fct_get_version},
     {CMD_TRANSFER,      PAYLOAD_LEN_DYNAMIC,  cmd_fct_transfer},
     {CMD_SET_TX_ADDR,   5,                    cmd_fct_set_tx_addr},
+    {CMD_SEND,          PAYLOAD_LEN_DYNAMIC,  cmd_fct_send},
 
     
     /* last entry NULL-terminator */
