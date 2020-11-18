@@ -8,11 +8,13 @@
 #include "timebase.h"
 #include "debug_swo.h"
 
-#define ESB_XFER_TIMEOUT_MS   100     /* timeout waiting for an answer in blocking XFER */
+#define ESB_CHECK_PIPE_PARAM(pipe)    do{if(pipe>=ESB_PIPE_NUM){return(ESB_ERR_PARAM);}}while(0)
+#define ESB_CHECK_NULL_PARAM(param)   do{if(param==NULL){return(ESB_ERR_PARAM);}}while(0)
+
 #define ESB_DEFAULT_CHANNEL 40
 
-#define ESB_PIPE_DIRECT_COMM    0
-#define ESB_PIPE_LISTENING      1
+#define ESB_PIPE_DIRECT_COMM    ESB_PIPE_0
+#define ESB_PIPE_LISTENING      ESB_PIPE_1
 
 static nrf_esb_payload_t        rx_payload;
 static nrf_esb_payload_t        tx_payload;
@@ -26,9 +28,8 @@ static volatile uint8_t g_tx_busy = 0;
 
 static esb_listener_callback_t g_listener_callback = NULL;
 
-static uint8_t g_tx_addr[5] = {0xC2, 0xC2, 0xC2, 0xC2, 0x01};
-static uint8_t g_listening_addr[5] = {0xE7, 0xE7, 0xE7, 0xE7, 0xE7};
-
+static uint8_t g_pipe_addr[2][5] = {{0xC2, 0xC2, 0xC2, 0xC2, 0x01}, {0xE7, 0xE7, 0xE7, 0xE7, 0xE7}}
+;
 static int8_t esb_reinit(nrf_esb_mode_t esb_mode);
 
 static void nrf_esb_event_handler(nrf_esb_evt_t const * p_event)
@@ -78,16 +79,16 @@ static int8_t esb_reinit(nrf_esb_mode_t esb_mode)
     nrf_esb_init(&g_nrf_esb_config);
 
     /* set pipeline addresses again because they are reset in nrf_esb_init() */
-    uint8_t addr_prefix[2] = {g_tx_addr[4], g_listening_addr[4]};
+    uint8_t addr_prefix[2] = {g_pipe_addr[ESB_PIPE_0][4], g_pipe_addr[ESB_PIPE_1][4]};
     if(nrf_esb_set_address_length(5) != NRF_SUCCESS){
         return (ESB_ERR_HAL);
     }
 
-    if(nrf_esb_set_base_address_0(g_tx_addr) != NRF_SUCCESS){
+    if(nrf_esb_set_base_address_0(g_pipe_addr[ESB_PIPE_0]) != NRF_SUCCESS){
         return (ESB_ERR_HAL);
     }
 
-    if(nrf_esb_set_base_address_1(g_listening_addr) != NRF_SUCCESS){
+    if(nrf_esb_set_base_address_1(g_pipe_addr[ESB_PIPE_0]) != NRF_SUCCESS){
         return (ESB_ERR_HAL);
     }
 
@@ -109,8 +110,8 @@ int8_t esb_init(const uint8_t listening_addr[5], esb_listener_callback_t listene
         return (ESB_ERR_PARAM);
     }
 
-    memcpy(g_listening_addr, listening_addr, 5);
-    uint8_t addr_prefix[2] = {g_tx_addr[4], g_listening_addr[4]};
+    memcpy(g_pipe_addr[ESB_PIPE_1], listening_addr, 5);
+    uint8_t addr_prefix[2] = {g_pipe_addr[ESB_PIPE_0][4], g_pipe_addr[ESB_PIPE_1][4]};
     
     g_nrf_esb_config.protocol                 = NRF_ESB_PROTOCOL_ESB_DPL;
     g_nrf_esb_config.mode                     = NRF_ESB_MODE_PRX;
@@ -135,11 +136,11 @@ int8_t esb_init(const uint8_t listening_addr[5], esb_listener_callback_t listene
         return (ESB_ERR_HAL);
     }
 
-    if(nrf_esb_set_base_address_0(g_tx_addr) != NRF_SUCCESS){
+    if(nrf_esb_set_base_address_0(g_pipe_addr[ESB_PIPE_0]) != NRF_SUCCESS){
         return (ESB_ERR_HAL);
     }
 
-    if(nrf_esb_set_base_address_1(g_listening_addr) != NRF_SUCCESS){
+    if(nrf_esb_set_base_address_1(g_pipe_addr[ESB_PIPE_1]) != NRF_SUCCESS){
         return (ESB_ERR_HAL);
     }
 
@@ -159,9 +160,13 @@ int8_t esb_init(const uint8_t listening_addr[5], esb_listener_callback_t listene
     return (ESB_ERR_OK);
 }
 
-void esb_set_tx_address(const uint8_t tx_addr[5])
+int8_t esb_set_pipeline_address(const esb_pipeline_t pipeline, const uint8_t addr[5])
 {
-    memcpy(g_tx_addr, tx_addr, 5);
+    ESB_CHECK_PIPE_PARAM(pipeline);
+
+    memcpy(g_pipe_addr[pipeline], addr, 5);
+
+    return (ESB_ERR_OK);
 }
 
 int8_t esb_set_rf_channel(const uint8_t channel)
@@ -173,43 +178,6 @@ int8_t esb_set_rf_channel(const uint8_t channel)
     return (ESB_ERR_OK);
 }
 
-int8_t esb_xfer_blocking(const uint8_t *p_tx_data, uint8_t tx_len, uint8_t *p_rx_data, uint8_t *p_rx_len)
-{
-    int8_t result = 0;
-    if((p_tx_data == NULL) || (p_rx_data == NULL) || (p_rx_len == NULL)){
-        return (ESB_ERR_PARAM);
-    }
-
-    if(tx_len > NRF_ESB_MAX_PAYLOAD_LENGTH){
-        return (ESB_ERR_SIZE);
-    }   
-    
-    rx_payload_available = 0;
-
-    result = nrf_esb_send(p_tx_data, tx_len);
-    if (result != NRF_SUCCESS)
-    {
-        debug_swo_printf("Sending packet failed\n");
-        return (ESB_ERR_HAL);
-    }
-
-    /* wait blocking for payload */
-    timebase_timeout_start(ESB_XFER_TIMEOUT_MS);
-    while(rx_payload_available == 0){
-        if(timebase_timeout_check()){
-            /* timeout*/
-            debug_swo_printf("Timeout waiting for answer");
-            return (ESB_ERR_TIMEOUT);
-        }
-    }
-
-    memcpy(p_rx_data, rx_payload.data, rx_payload.length);
-    *p_rx_len = rx_payload.length;
-
-    debug_swo_printf("ANSWER PAYLOAD: len %d | data[0]: %02X \n", rx_payload.length, rx_payload.data[0]);
-
-    return (ESB_ERR_OK);
-}
 
 int8_t nrf_esb_send(const uint8_t *payload, uint32_t payload_length)
 {

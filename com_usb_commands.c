@@ -110,7 +110,7 @@ void cmd_fct_send(const usb_message_t* message, usb_message_t* answer)
 void cmd_fct_set_tx_addr(const usb_message_t* message, usb_message_t* answer)
 {
     answer->error = 0;    
-    esb_set_tx_address(message->payload);
+    esb_set_pipeline_address(ESB_PIPE_0, message->payload);
     
     return;
 }

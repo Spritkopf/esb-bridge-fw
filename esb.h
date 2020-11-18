@@ -13,7 +13,11 @@
 
 typedef void(*esb_listener_callback_t)(uint8_t *payload, uint8_t payload_length);
 
-
+typedef enum {
+    ESB_PIPE_0 = 0x00,
+    ESB_PIPE_1 = 0x01,
+    ESB_PIPE_NUM = 0x02
+} esb_pipeline_t;
 
 /* initialize Enhanced Shockburst (ESB) communication 
  * listening_addr: Pipeline address for RX mode
@@ -25,9 +29,11 @@ typedef void(*esb_listener_callback_t)(uint8_t *payload, uint8_t payload_length)
 */
 int8_t esb_init(const uint8_t listening_addr[5], esb_listener_callback_t listener_callback);
 
-/* Set TX target address
+/* \brief Set pipeline address
+ * \param pipeline              Pipeline number to listen on
+ * \param address               Pipeline address
 */
-void esb_set_tx_address(const uint8_t tx_addr[5]);
+int8_t esb_set_pipeline_address(const esb_pipeline_t pipeline, const uint8_t addr[5]);
 
 
 /* Set RF Channel
