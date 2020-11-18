@@ -26,9 +26,9 @@ static nrf_esb_config_t g_nrf_esb_config = NRF_ESB_DEFAULT_CONFIG;
 static volatile uint8_t g_initialized = 0;
 static volatile uint8_t g_tx_busy = 0;
 
-static esb_listener_callback_t g_listener_callback = NULL;
+static esb_listener_callback_t g_listener_callbacks[ESB_PIPE_NUM] = {NULL, NULL};
 
-static uint8_t g_pipe_addr[2][5] = {{0xC2, 0xC2, 0xC2, 0xC2, 0x01}, {0xE7, 0xE7, 0xE7, 0xE7, 0xE7}}
+static uint8_t g_pipe_addr[ESB_PIPE_NUM][5] = {{0xC2, 0xC2, 0xC2, 0xC2, 0x01}, {0xE7, 0xE7, 0xE7, 0xE7, 0xE7}}
 ;
 static int8_t esb_reinit(nrf_esb_mode_t esb_mode);
 
@@ -55,8 +55,8 @@ static void nrf_esb_event_handler(nrf_esb_evt_t const * p_event)
                 {
                     if(rx_payload.pipe == ESB_PIPE_LISTENING){
                         /* action for incoming messages for general listening address */
-                        if(g_listener_callback != NULL){
-                            g_listener_callback(rx_payload.data, rx_payload.length);
+                        if(g_listener_callbacks[ESB_PIPE_1] != NULL){
+                            g_listener_callbacks[ESB_PIPE_1](rx_payload.data, rx_payload.length);
                         }
                         
                     }
@@ -88,7 +88,7 @@ static int8_t esb_reinit(nrf_esb_mode_t esb_mode)
         return (ESB_ERR_HAL);
     }
 
-    if(nrf_esb_set_base_address_1(g_pipe_addr[ESB_PIPE_0]) != NRF_SUCCESS){
+    if(nrf_esb_set_base_address_1(g_pipe_addr[ESB_PIPE_1]) != NRF_SUCCESS){
         return (ESB_ERR_HAL);
     }
 
@@ -104,15 +104,8 @@ static int8_t esb_reinit(nrf_esb_mode_t esb_mode)
     return (ESB_ERR_OK);
 }
     
-int8_t esb_init(const uint8_t listening_addr[5], esb_listener_callback_t listener_callback)
-{
-    if(listening_addr == NULL){
-        return (ESB_ERR_PARAM);
-    }
-
-    memcpy(g_pipe_addr[ESB_PIPE_1], listening_addr, 5);
-    uint8_t addr_prefix[2] = {g_pipe_addr[ESB_PIPE_0][4], g_pipe_addr[ESB_PIPE_1][4]};
-    
+int8_t esb_init(void)
+{    
     g_nrf_esb_config.protocol                 = NRF_ESB_PROTOCOL_ESB_DPL;
     g_nrf_esb_config.mode                     = NRF_ESB_MODE_PRX;
     g_nrf_esb_config.event_handler            = nrf_esb_event_handler;
@@ -132,30 +125,6 @@ int8_t esb_init(const uint8_t listening_addr[5], esb_listener_callback_t listene
         return (ESB_ERR_HAL);
     }
 
-    if(nrf_esb_set_address_length(5) != NRF_SUCCESS){
-        return (ESB_ERR_HAL);
-    }
-
-    if(nrf_esb_set_base_address_0(g_pipe_addr[ESB_PIPE_0]) != NRF_SUCCESS){
-        return (ESB_ERR_HAL);
-    }
-
-    if(nrf_esb_set_base_address_1(g_pipe_addr[ESB_PIPE_1]) != NRF_SUCCESS){
-        return (ESB_ERR_HAL);
-    }
-
-    if(nrf_esb_set_prefixes(addr_prefix, 2) != NRF_SUCCESS){
-        return (ESB_ERR_HAL);
-    }
-
-    if(nrf_esb_start_rx() != NRF_SUCCESS){
-        return (ESB_ERR_HAL);
-    }
-
-    if(listener_callback != NULL){
-        g_listener_callback = listener_callback;
-    }
-
     g_initialized = 1;
     return (ESB_ERR_OK);
 }
@@ -163,10 +132,36 @@ int8_t esb_init(const uint8_t listening_addr[5], esb_listener_callback_t listene
 int8_t esb_set_pipeline_address(const esb_pipeline_t pipeline, const uint8_t addr[5])
 {
     ESB_CHECK_PIPE_PARAM(pipeline);
+    ESB_CHECK_NULL_PARAM(addr);
 
     memcpy(g_pipe_addr[pipeline], addr, 5);
 
     return (ESB_ERR_OK);
+}
+
+int8_t esb_start_listening(const esb_pipeline_t pipeline, esb_listener_callback_t listener_callback)
+{
+    ESB_CHECK_PIPE_PARAM(pipeline);
+    ESB_CHECK_NULL_PARAM(listener_callback);
+    
+    g_listener_callbacks[pipeline] = listener_callback;
+
+    return (esb_reinit(NRF_ESB_MODE_PRX));
+
+}
+
+int8_t esb_stop_listening(const esb_pipeline_t pipeline)
+{
+    ESB_CHECK_PIPE_PARAM(pipeline);
+    
+    if((g_listener_callbacks[ESB_PIPE_0] == NULL) && (g_listener_callbacks[ESB_PIPE_1] == NULL))
+    {
+        if(nrf_esb_stop_rx() != NRF_SUCCESS){
+            return (ESB_ERR_HAL);
+        }
+    }
+
+    return (ESB_ERR_OK);   
 }
 
 int8_t esb_set_rf_channel(const uint8_t channel)

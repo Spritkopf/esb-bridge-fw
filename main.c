@@ -154,8 +154,9 @@ int main(void)
 
     com_usb_init(com_usb_event_handler);
 
-    err_code = esb_init(esb_listener_address, esb_listener_callback);
-
+    err_code = esb_init();
+    esb_set_pipeline_address(ESB_PIPE_1, esb_listener_address);
+    esb_start_listening(ESB_PIPE_1, esb_listener_callback);
     //uint8_t tx = 1;
     //uint8_t rx[32] = {0};
     //uint8_t rx_len = 0;

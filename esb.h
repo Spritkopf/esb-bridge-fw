@@ -27,14 +27,28 @@ typedef enum {
  * ESB_ERR_HAL      - ESB HAL Error
  * ESB_ERR_PARAM    - Parameter Error (NULL Pointer)
 */
-int8_t esb_init(const uint8_t listening_addr[5], esb_listener_callback_t listener_callback);
+int8_t esb_init(void);
 
 /* \brief Set pipeline address
  * \param pipeline              Pipeline number to listen on
- * \param address               Pipeline address
+ * \param addr                  Pipeline address
 */
 int8_t esb_set_pipeline_address(const esb_pipeline_t pipeline, const uint8_t addr[5]);
 
+/* \brief Start listening on pipeline 
+ * \param pipeline              Pipeline number to listen on
+ * \param listener_callback     gets called on incoming package
+ * \retval ESB_ERR_OK           OK
+ * \retval ESB_ERR_PARAM        Parameter Error (NULL Pointer, Illegal pipeline number)
+ */
+int8_t esb_start_listening(const esb_pipeline_t pipeline, esb_listener_callback_t listener_callback);
+
+/* \brief Stop listening on pipeline
+ * \param pipeline              Pipeline number to listen on
+ * \retval ESB_ERR_OK           OK
+ * \retval ESB_ERR_PARAM        Illegal pipeline number
+ */
+int8_t esb_stop_listening(const esb_pipeline_t pipeline);
 
 /* \brief Set RF Channel
  * \param pipeline  Pipeline number to listen on
