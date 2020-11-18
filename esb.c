@@ -34,8 +34,7 @@ static int8_t esb_reinit(nrf_esb_mode_t esb_mode);
 
 static void nrf_esb_event_handler(nrf_esb_evt_t const * p_event)
 {
-    switch (p_event->evt_id)
-    {
+    switch (p_event->evt_id){
         case NRF_ESB_EVENT_TX_SUCCESS:
             debug_swo_printf("TX SUCCESS EVENT (%lu attempts)\n", p_event->tx_attempts);
             g_tx_busy = 0;
@@ -49,20 +48,13 @@ static void nrf_esb_event_handler(nrf_esb_evt_t const * p_event)
             break;
         case NRF_ESB_EVENT_RX_RECEIVED:
             debug_swo_printf("RX RECEIVED EVENT\n");
-            while (nrf_esb_read_rx_payload(&rx_payload) == NRF_SUCCESS)
-            {
-                if (rx_payload.length > 0)
-                {
-                    if(rx_payload.pipe == ESB_PIPE_LISTENING){
-                        /* action for incoming messages for general listening address */
-                        if(g_listener_callbacks[ESB_PIPE_1] != NULL){
-                            g_listener_callbacks[ESB_PIPE_1](rx_payload.data, rx_payload.length);
+            while (nrf_esb_read_rx_payload(&rx_payload) == NRF_SUCCESS){
+                if (rx_payload.length > 0){
+                    if(rx_payload.pipe < ESB_PIPE_NUM){
+                        if(g_listener_callbacks[rx_payload.pipe] != NULL){
+                            g_listener_callbacks[rx_payload.pipe](rx_payload.data, rx_payload.length);
                         }
                         
-                    }
-                    if(rx_payload.pipe == ESB_PIPE_DIRECT_COMM){
-                        /* action for incoming messages as direct answer to a sent message */
-                        rx_payload_available = 1;
                     }
                 }
             }
@@ -154,8 +146,7 @@ int8_t esb_stop_listening(const esb_pipeline_t pipeline)
 {
     ESB_CHECK_PIPE_PARAM(pipeline);
     
-    if((g_listener_callbacks[ESB_PIPE_0] == NULL) && (g_listener_callbacks[ESB_PIPE_1] == NULL))
-    {
+    if((g_listener_callbacks[ESB_PIPE_0] == NULL) && (g_listener_callbacks[ESB_PIPE_1] == NULL)){
         if(nrf_esb_stop_rx() != NRF_SUCCESS){
             return (ESB_ERR_HAL);
         }
