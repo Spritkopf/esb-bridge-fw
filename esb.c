@@ -179,20 +179,20 @@ int8_t esb_set_rf_channel(const uint8_t channel)
 }
 
 
-int8_t nrf_esb_send(const uint8_t *payload, uint32_t payload_length)
+int8_t esb_send_packet(const esb_pipeline_t pipeline, const uint8_t *payload, uint32_t payload_length)
 {
+    ESB_CHECK_PIPE_PARAM(pipeline);
+    ESB_CHECK_NULL_PARAM(payload);
+    
     if(g_initialized != 1){
         return (ESB_ERR_INIT);
     }
-    if(payload == NULL){
-        return (ESB_ERR_PARAM);
-    }
-
+    
     while(g_tx_busy==1); /* wait until radio is ready */
     esb_reinit(NRF_ESB_MODE_PTX);
     memcpy(tx_payload.data, payload, payload_length);
     tx_payload.length = payload_length;
-    tx_payload.pipe = 0;
+    tx_payload.pipe = pipeline;
     if(nrf_esb_write_payload(&tx_payload) == NRF_SUCCESS){
         g_tx_busy = 1;  
     }else{

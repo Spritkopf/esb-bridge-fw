@@ -97,7 +97,7 @@ void cmd_fct_transfer(const usb_message_t* message, usb_message_t* answer)
 void cmd_fct_send(const usb_message_t* message, usb_message_t* answer)
 {
     answer->error = 0;    
-    if(nrf_esb_send(message->payload, message->payload_len) != 0){
+    if(esb_send_packet(ESB_PIPE_0, message->payload, message->payload_len) != 0){
         answer->error = CMD_E_ESB;    
     }
 
