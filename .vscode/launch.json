@@ -14,7 +14,7 @@
             "device": "NRF52840_XXAA",
             "interface": "swd",
             "ipAddress": null,
-            "serialNumber": null,
+            "serialNumber": 50105935,
             "runToMain": true,
             "swoConfig": {"cpuFrequency": 64000000,
                           "swoFrequency": 16000000,

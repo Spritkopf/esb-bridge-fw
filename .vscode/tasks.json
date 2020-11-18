@@ -12,6 +12,12 @@
                 "kind": "build",
                 "isDefault": true
             }
+        },
+        {
+            "label": "flash rx bin",
+            "type": "shell",
+            "command": "nrfjprog --snr 260104666 -f nrf52 --eraseall && nrfjprog --snr 260104666 -f nrf52 --program _build/nrf52840_xxaa.hex --reset",
+            "problemMatcher": []
         }
     ]
 }
