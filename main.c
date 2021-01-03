@@ -62,7 +62,6 @@
 
 
 static uint8_t g_usb_rx_ready = 0;
-static uint32_t test_flag = 0;
 
 static uint8_t esb_listener_address[5] = {0xDE,0xAD,0xBE,0xEF,0x02};
 
@@ -93,7 +92,6 @@ static void com_usb_event_handler(com_usb_evt_type_t evt_type)
 
 static void button_handler(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t action){
     debug_swo_printf("BUTTON PRESSED\n");
-    test_flag = 1;
 }
 
 
@@ -157,23 +155,11 @@ int main(void)
     err_code = esb_init();
     esb_set_pipeline_address(ESB_PIPE_1, esb_listener_address);
     esb_start_listening(ESB_PIPE_1, esb_listener_callback);
-    //uint8_t tx = 1;
-    //uint8_t rx[32] = {0};
-    //uint8_t rx_len = 0;
 	while (true)
 	{
         if(g_usb_rx_ready == 1){
             g_usb_rx_ready = 0;
             com_usb_process();
         }
-
-        if(1 == test_flag){
-            test_flag = 0;
-
-            //int8_t result = esb_transmit_blocking(&tx,1,rx,&rx_len);
-
-            //debug_swo_printf("TX result: %i", result);
-        }
-
     }
 }
