@@ -107,7 +107,7 @@ int8_t esb_init(void)
     g_nrf_esb_config.retransmit_delay         = 600;
     g_nrf_esb_config.retransmit_count         = 10;
     g_nrf_esb_config.tx_mode                  = NRF_ESB_TXMODE_AUTO;
-    g_nrf_esb_config.selective_auto_ack       = false;
+    g_nrf_esb_config.selective_auto_ack       = true;
 
     if(nrf_esb_init(&g_nrf_esb_config) != NRF_SUCCESS){
         return (ESB_ERR_HAL);
@@ -146,6 +146,8 @@ int8_t esb_stop_listening(const esb_pipeline_t pipeline)
 {
     ESB_CHECK_PIPE_PARAM(pipeline);
     
+    g_listener_callbacks[pipeline] = NULL;
+
     if((g_listener_callbacks[ESB_PIPE_0] == NULL) && (g_listener_callbacks[ESB_PIPE_1] == NULL)){
         if(nrf_esb_stop_rx() != NRF_SUCCESS){
             return (ESB_ERR_HAL);
@@ -184,6 +186,6 @@ int8_t esb_send_packet(const esb_pipeline_t pipeline, const uint8_t *payload, ui
     }else{
         return (ESB_ERR_HAL);
     }
-    
+    while(g_tx_busy==1); /* wait until radio is ready */
     return (ESB_ERR_OK);
 }

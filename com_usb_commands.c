@@ -7,12 +7,31 @@
 #include "nrf_error.h"
 #include "debug_swo.h"
 #include "esb.h"
+#include "timebase.h"
 
 #define PAYLOAD_LEN_DYNAMIC 0xFF
 
 
 #define CMD_E_ESB           0x81
 #define CMD_E_ESB_TIMEOUT   0x82
+
+static volatile uint8_t g_esb_answer_received = 0;
+static volatile uint8_t g_esb_answer_payload[NRF_ESB_MAX_PAYLOAD_LENGTH];
+static volatile uint8_t g_esb_answer_payload_len = 0;
+
+static void answer_callback(uint8_t *payload, uint8_t payload_length)
+{
+    debug_swo_printf("Got an answer!: [ ");
+    for(uint8_t i = 0; i<payload_length; i++){
+        debug_swo_printf("%02X ", payload[i]);  
+
+    }
+    debug_swo_printf("]\n");  
+
+    memcpy((uint8_t*)g_esb_answer_payload, payload, payload_length);
+    g_esb_answer_payload_len = payload_length;
+    g_esb_answer_received = 1;
+}
 
 void cmd_fct_test(const usb_message_t* message, usb_message_t* answer)
 {
@@ -36,9 +55,10 @@ void cmd_fct_test(const usb_message_t* message, usb_message_t* answer)
  */
 void cmd_fct_get_version(const usb_message_t* message, usb_message_t* answer)
 {
+    debug_swo_printf("Cmd: Get FW Version\n");
     answer->payload_len = 3;
     answer->payload[0] = 0;
-    answer->payload[1] = 2;
+    answer->payload[1] = 3;
     answer->payload[2] = 0;
     
     return;
@@ -46,44 +66,46 @@ void cmd_fct_get_version(const usb_message_t* message, usb_message_t* answer)
 
 
 /* Transfer a ESB package and return the answer payload
- * The message payload must be >=1 and <= 32 :
+ * The message payload has the target address in the first 5 bytes, afterwards the payload
+ * minimum payload size: 6 bytes (address + at least 1 payload byte)
  * answer payload: answer payload
  * answer error: E_OK if OK, otherwise E_ESB
  * 
- * Note: set TX address beforehand with command CMD_SET_TX_ADDR
  */
 void cmd_fct_transfer(const usb_message_t* message, usb_message_t* answer)
 {
-    #if 0
-    if((message->payload_len < 1) || (message->payload_len > NRF_ESB_MAX_PAYLOAD_LENGTH))
+    if((message->payload_len < 6) || (message->payload_len > NRF_ESB_MAX_PAYLOAD_LENGTH))
     {
         /* invalid payload length */
         answer->error = E_PL_LEN;
     }
     else
     {
-        //uint8_t esb_answer_payload[NRF_ESB_MAX_PAYLOAD_LENGTH] = {0};
-        //uint8_t esb_answer_len = 0;
-        int8_t result = esb_xfer_blocking(message->payload, message->payload_len, answer->payload, &(answer->payload_len));
-
+        esb_set_pipeline_address(ESB_PIPE_0, message->payload);
+        int8_t result = esb_send_packet(ESB_PIPE_0, &(message->payload[5]), (message->payload_len)-5);
+        
         if (result == ESB_ERR_OK)
         {
+            esb_start_listening(ESB_PIPE_0, answer_callback);
             debug_swo_printf("Sending success\n");
             answer->error = E_OK;
-        }
-        else
-        if (result == ESB_ERR_TIMEOUT)
-        {
-            debug_swo_printf("Timeout waiting for answer\n");
-            answer->error = CMD_E_ESB_TIMEOUT;
-        }
-        else
-        {
+        } else {
             debug_swo_printf("Sending packet failed\n");
             answer->error = CMD_E_ESB;
         }
+        timebase_timeout_start(1000);
+        while(g_esb_answer_received==0){
+            if(timebase_timeout_check()==1){
+                debug_swo_printf("Timeout waiting for answer\n");
+                answer->error = CMD_E_ESB_TIMEOUT;
+                break;
+            }
+        }
+        memcpy(answer->payload, (uint8_t*)g_esb_answer_payload, g_esb_answer_payload_len);
+        answer->payload_len = g_esb_answer_payload_len;
+        g_esb_answer_received = 0;
+        esb_stop_listening(ESB_PIPE_0);
     }
-    #endif
     return;
 }
 

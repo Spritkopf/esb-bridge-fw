@@ -140,7 +140,7 @@ int main(void)
 
     gpio_init();
 
-    debug_swo_printf("startup\n"),
+    debug_swo_printf("startup\n");
     clocks_start();
 
     timebase_init();
