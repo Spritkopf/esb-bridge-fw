@@ -3083,4 +3083,8 @@
 // </e>
 // </h>
 
+#ifndef CRC16_ENABLED
+#define CRC16_ENABLED 1
+#endif
+
 #endif // NRFX_CONFIG_CUSTOM_H__

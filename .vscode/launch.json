@@ -10,7 +10,7 @@
             "request": "launch",
             "servertype": "jlink",
             "cwd": "${workspaceRoot}",
-            "executable": "./_build/nrf52840_xxaa.out",
+            "executable": "./_build/esb_bridge.out",
             "device": "NRF52840_XXAA",
             "interface": "swd",
             "ipAddress": null,

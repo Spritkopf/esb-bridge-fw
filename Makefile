@@ -1,12 +1,12 @@
-PROJECT_NAME     := nrf-bridge2
-TARGETS          := nrf52840_xxaa
+PROJECT_NAME     := esb-bridge
+TARGETS          := esb_bridge
 OUTPUT_DIRECTORY := _build
 
 GNU_INSTALL_ROOT := 
 SDK_ROOT := $(HOME)/opt/nrf5x-sdk/nRF5_SDK_17.0.0_9d13099
 PROJ_DIR := .
 
-$(OUTPUT_DIRECTORY)/nrf52840_xxaa.out: \
+$(OUTPUT_DIRECTORY)/esb_bridge.out: \
   LINKER_SCRIPT  := esb_ptx_gcc_nrf52.ld
 
 # Source files common to all targets
@@ -16,7 +16,6 @@ SRC_FILES += \
   $(PROJ_DIR)/esb.c \
   $(PROJ_DIR)/com_usb.c \
   $(PROJ_DIR)/com_usb_commands.c \
-  $(PROJ_DIR)/crc16_ccitt.c \
   $(PROJ_DIR)/debug_swo.c \
   $(SDK_ROOT)/modules/nrfx/mdk/gcc_startup_nrf52840.S \
   $(SDK_ROOT)/components/boards/boards.c \
@@ -31,6 +30,7 @@ SRC_FILES += \
   $(SDK_ROOT)/components/libraries/util/app_error_handler_gcc.c \
   $(SDK_ROOT)/components/libraries/util/app_error_weak.c \
   $(SDK_ROOT)/components/libraries/atomic_fifo/nrf_atfifo.c \
+  $(SDK_ROOT)/components/libraries/crc16/crc16.c \
   $(SDK_ROOT)/components/proprietary_rf/esb/nrf_esb.c \
   $(SDK_ROOT)/components/libraries/usbd/app_usbd.c \
   $(SDK_ROOT)/components/libraries/usbd/class/cdc/acm/app_usbd_cdc_acm.c \
@@ -71,6 +71,7 @@ INC_FOLDERS += \
   $(SDK_ROOT)/components/libraries/atomic_fifo \
   $(SDK_ROOT)/components/libraries/delay \
   $(SDK_ROOT)/components/libraries/timer \
+  $(SDK_ROOT)/components/libraries/crc16 \
   $(SDK_ROOT)/components/boards \
   $(SDK_ROOT)/integration/nrfx/legacy \
   $(SDK_ROOT)/integration/nrfx \
@@ -134,10 +135,10 @@ LDFLAGS += -Wl,--gc-sections
 # use newlib in nano version
 LDFLAGS += --specs=nano.specs
 
-nrf52840_xxaa: CFLAGS += -D__HEAP_SIZE=8192
-nrf52840_xxaa: CFLAGS += -D__STACK_SIZE=8192
-nrf52840_xxaa: ASMFLAGS += -D__HEAP_SIZE=8192
-nrf52840_xxaa: ASMFLAGS += -D__STACK_SIZE=8192
+esb_bridge: CFLAGS += -D__HEAP_SIZE=8192
+esb_bridge: CFLAGS += -D__STACK_SIZE=8192
+esb_bridge: ASMFLAGS += -D__HEAP_SIZE=8192
+esb_bridge: ASMFLAGS += -D__STACK_SIZE=8192
 
 # Add standard libraries at the very end of the linker input, after all objects
 # that may need symbols provided by these libraries.
@@ -147,13 +148,12 @@ LIB_FILES += -lc -lnosys -lm
 .PHONY: default help
 
 # Default target - first one defined
-default: nrf52840_xxaa
+default: esb_bridge
 
 # Print all targets that can be built
 help:
 	@echo following targets are available:
-	@echo		nrf52840_xxaa
-	@echo		sdk_config - starting external tool for editing sdk_config.h
+	@echo		esb_bridge
 	@echo		flash      - flashing binary
 
 TEMPLATE_PATH := $(SDK_ROOT)/components/toolchain/gcc
@@ -167,14 +167,9 @@ $(foreach target, $(TARGETS), $(call define_target, $(target)))
 
 # Flash the program
 flash: default
-	@echo Flashing: $(OUTPUT_DIRECTORY)/nrf52840_xxaa.hex
-	nrfjprog -f nrf52 --program $(OUTPUT_DIRECTORY)/nrf52840_xxaa.hex --sectorerase
+	@echo Flashing: $(OUTPUT_DIRECTORY)/esb_bridge.hex
+	nrfjprog -f nrf52 --program $(OUTPUT_DIRECTORY)/esb_bridge.hex --sectorerase
 	nrfjprog -f nrf52 --reset
 
 erase:
 	nrfjprog -f nrf52 --eraseall
-
-SDK_CONFIG_FILE := ../config/sdk_config.h
-CMSIS_CONFIG_TOOL := $(SDK_ROOT)/external_tools/cmsisconfig/CMSIS_Configuration_Wizard.jar
-sdk_config:
-	java -jar $(CMSIS_CONFIG_TOOL) $(SDK_CONFIG_FILE)

@@ -10,8 +10,8 @@
 
 #include "com_usb.h"
 #include "com_usb_commands.h"
-#include "crc16_ccitt.h"
 #include "timebase.h"
+#include "crc16.h"
 
 #define CDC_ACM_STARTUP_DELAY_MS 100 
 
@@ -172,7 +172,7 @@ void com_usb_process(void)
         usb_rx_available = 0;
         
         /* check CRC16 */
-        uint16_t crc = crc16_ccitt((void*)usb_rx_buffer, USB_PROTOCOL_PACKET_SIZE-USB_PROTOCOL_CHECKSUM_SIZE);
+        uint16_t crc = crc16_compute((void*)usb_rx_buffer, USB_PROTOCOL_PACKET_SIZE-USB_PROTOCOL_CHECKSUM_SIZE,NULL);
         received_message.crc16 = *(uint16_t*)&usb_rx_buffer[USB_PROTOCOL_PACKET_SIZE-USB_PROTOCOL_CHECKSUM_SIZE];
         if(crc != received_message.crc16)
         {
@@ -230,7 +230,7 @@ void com_usb_transmit(usb_message_t* message)
     usb_tx_buffer[2] = message->error;
     usb_tx_buffer[3] = message->payload_len;
     memcpy(&usb_tx_buffer[4], message->payload, 58);
-    crc = crc16_ccitt(usb_tx_buffer, USB_PROTOCOL_PACKET_SIZE-USB_PROTOCOL_CHECKSUM_SIZE);
+    crc = crc16_compute((void*)usb_tx_buffer, USB_PROTOCOL_PACKET_SIZE-USB_PROTOCOL_CHECKSUM_SIZE,NULL);
     usb_tx_buffer[62] = (uint8_t)(crc & 0xFF);
     usb_tx_buffer[63] = (uint8_t)((crc>>8) & 0xFF);
 

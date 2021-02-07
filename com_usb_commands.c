@@ -8,6 +8,7 @@
 #include "debug_swo.h"
 #include "esb.h"
 #include "timebase.h"
+#include "version.h"
 
 #define PAYLOAD_LEN_DYNAMIC 0xFF
 
@@ -57,9 +58,9 @@ void cmd_fct_get_version(const usb_message_t* message, usb_message_t* answer)
 {
     debug_swo_printf("Cmd: Get FW Version\n");
     answer->payload_len = 3;
-    answer->payload[0] = 0;
-    answer->payload[1] = 3;
-    answer->payload[2] = 0;
+    answer->payload[0] = VERSION_MAJOR;
+    answer->payload[1] = VERSION_MINOR;
+    answer->payload[2] = VERSION_PATCH;
     
     return;
 }
@@ -111,29 +112,28 @@ void cmd_fct_transfer(const usb_message_t* message, usb_message_t* answer)
 
 
 /* Transmit a ESB package
- * The message payload must be >=1 and <= 32 :
+ * The message payload has the target address in the first 5 bytes, afterwards the payload
+ * minimum payload size: 6 bytes (address + at least 1 payload byte)
  * answer error: E_OK if OK, otherwise E_ESB
  * 
  * Note: set TX address beforehand with command CMD_SET_TX_ADDR
  */
 void cmd_fct_send(const usb_message_t* message, usb_message_t* answer)
 {
-    answer->error = 0;    
-    if(esb_send_packet(ESB_PIPE_0, message->payload, message->payload_len) != 0){
-        answer->error = CMD_E_ESB;    
+    if((message->payload_len < 6) || (message->payload_len > NRF_ESB_MAX_PAYLOAD_LENGTH)){
+        /* invalid payload length */
+        answer->error = E_PL_LEN;
+    }
+    else{
+        answer->error = 0;    
+        esb_set_pipeline_address(ESB_PIPE_0, message->payload);
+        int8_t result = esb_send_packet(ESB_PIPE_0, &(message->payload[5]), (message->payload_len)-5);
+            
+        if (result == ESB_ERR_OK){
+            answer->error = CMD_E_ESB;    
+        }
     }
 
-    return;
-}
-/* Set address of TX Pipeline
- * payload:    5 bytes TX pipeline address
- * No answer payload
- */
-void cmd_fct_set_tx_addr(const usb_message_t* message, usb_message_t* answer)
-{
-    answer->error = 0;    
-    esb_set_pipeline_address(ESB_PIPE_0, message->payload);
-    
     return;
 }
 
@@ -160,7 +160,6 @@ cmd_table_item_t cmd_table[] =
     {CMD_TEST,          PAYLOAD_LEN_DYNAMIC,  cmd_fct_test},
     {CMD_VERSION,       0,                    cmd_fct_get_version},
     {CMD_TRANSFER,      PAYLOAD_LEN_DYNAMIC,  cmd_fct_transfer},
-    {CMD_SET_TX_ADDR,   5,                    cmd_fct_set_tx_addr},
     {CMD_SEND,          PAYLOAD_LEN_DYNAMIC,  cmd_fct_send},
 
     
