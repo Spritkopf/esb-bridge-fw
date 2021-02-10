@@ -43,6 +43,8 @@ void cmd_fct_test(const usb_message_t* message, usb_message_t* answer)
 
     for(uint8_t i=0; i< message->payload_len; i++){
         debug_swo_printf(" %02X ", message->payload[i]);
+        answer->payload[i] = message->payload[i];
+        answer->payload_len = message->payload_len;
     }
 
     debug_swo_printf("]\n");

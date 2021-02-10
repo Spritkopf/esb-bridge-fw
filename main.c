@@ -92,6 +92,18 @@ static void com_usb_event_handler(com_usb_evt_type_t evt_type)
 
 static void button_handler(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t action){
     debug_swo_printf("BUTTON PRESSED\n");
+
+    // For client test: Send a USB message with CMD_IRQ to the host
+    usb_message_t msg = {
+        .cmd = CMD_IRQ,
+        .error = E_OK,
+        .payload_len=3,
+    };
+    msg.payload[0] = 1;
+    msg.payload[1] = 2;
+    msg.payload[2] = 3;
+
+    com_usb_transmit(&msg);
 }
 
 
