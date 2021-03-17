@@ -67,6 +67,12 @@ static uint8_t esb_listener_address[5] = {0xDE,0xAD,0xBE,0xEF,0x02};
 
 static void esb_listener_callback(uint8_t *payload, uint8_t payload_length)
 {
+    debug_swo_printf("Got incoming message: [ ");
+    for(uint8_t i = 0; i<payload_length; i++){
+        debug_swo_printf("%02X ", payload[i]);  
+
+    }
+    debug_swo_printf("]\n");  
     usb_message_t msg = {
         .cmd = CMD_RX,
         .error = E_OK,
@@ -81,8 +87,10 @@ static void com_usb_event_handler(com_usb_evt_type_t evt_type)
 {
     switch(evt_type){
     case COM_USB_EVT_PORT_OPENED:
+        debug_swo_printf("Usb Connected\n");
         break;
     case COM_USB_EVT_PORT_CLOSED:
+        debug_swo_printf("Usb Disconnected\n");
         break;
     case COM_USB_EVT_RX_DONE:
         g_usb_rx_ready = 1;
@@ -142,6 +150,7 @@ void rf_antenna_init(void)
     nrf_gpio_pin_set(NRF_GPIO_PIN_MAP(0, 24));
     nrf_gpio_pin_clear(NRF_GPIO_PIN_MAP(0, 25));
 }
+
 
 int main(void)
 {

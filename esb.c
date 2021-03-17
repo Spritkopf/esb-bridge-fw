@@ -13,9 +13,6 @@
 
 #define ESB_DEFAULT_CHANNEL 40
 
-#define ESB_PIPE_DIRECT_COMM    ESB_PIPE_0
-#define ESB_PIPE_LISTENING      ESB_PIPE_1
-
 static nrf_esb_payload_t        rx_payload;
 static nrf_esb_payload_t        tx_payload;
 
@@ -45,8 +42,8 @@ static void nrf_esb_event_handler(nrf_esb_evt_t const * p_event)
             g_tx_busy = 0;
             break;
         case NRF_ESB_EVENT_RX_RECEIVED:
-            debug_swo_printf("RX RECEIVED EVENT\n");
             while (nrf_esb_read_rx_payload(&rx_payload) == NRF_SUCCESS){
+                debug_swo_printf("RX RECEIVED EVENT, pipeline %i, len %i\n", rx_payload.pipe, rx_payload.length);
                 if (rx_payload.length > 0){
                     if(rx_payload.pipe < ESB_PIPE_NUM){
                         if(g_listener_callbacks[rx_payload.pipe] != NULL){
@@ -56,7 +53,6 @@ static void nrf_esb_event_handler(nrf_esb_evt_t const * p_event)
                     }
                 }
             }
-            nrf_esb_flush_rx();
             break;
     }
 }
