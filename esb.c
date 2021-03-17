@@ -43,8 +43,6 @@ static void nrf_esb_event_handler(nrf_esb_evt_t const * p_event)
         case NRF_ESB_EVENT_TX_FAILED:
             debug_swo_printf("TX FAILED EVENT\n");
             g_tx_busy = 0;
-            (void) nrf_esb_flush_tx();
-            (void) nrf_esb_start_tx();
             break;
         case NRF_ESB_EVENT_RX_RECEIVED:
             debug_swo_printf("RX RECEIVED EVENT\n");
@@ -181,6 +179,7 @@ int8_t esb_send_packet(const esb_pipeline_t pipeline, const uint8_t *payload, ui
     memcpy(tx_payload.data, payload, payload_length);
     tx_payload.length = payload_length;
     tx_payload.pipe = pipeline;
+    tx_payload.noack = true;
     if(nrf_esb_write_payload(&tx_payload) == NRF_SUCCESS){
         g_tx_busy = 1;  
     }else{
