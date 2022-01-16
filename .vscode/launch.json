@@ -14,7 +14,7 @@
             "device": "NRF52840_XXAA",
             "interface": "swd",
             "ipAddress": null,
-            "serialNumber": 50105935,
+            "serialNumber": 260104666,
             "runToMain": true,
             "swoConfig": {"cpuFrequency": 64000000,
                           "swoFrequency": 16000000,
@@ -24,7 +24,8 @@
                             {
                                 "type": "console",
                                 "port": 0,
-                                "label": "Trace",
+                                "label": "SWO Output",
+                                "encoding":"ascii"
                             }
                           ]}
         },

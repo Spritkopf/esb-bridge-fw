@@ -11,13 +11,13 @@ $(OUTPUT_DIRECTORY)/esb_bridge.out: \
 
 # Source files common to all targets
 SRC_FILES += \
-  $(PROJ_DIR)/main.c \
-  $(PROJ_DIR)/timebase.c \
-  $(PROJ_DIR)/led.c \
-  $(PROJ_DIR)/esb.c \
-  $(PROJ_DIR)/com_usb.c \
-  $(PROJ_DIR)/com_usb_commands.c \
-  $(PROJ_DIR)/debug_swo.c \
+  $(PROJ_DIR)/src/main.c \
+  $(PROJ_DIR)/src/timebase.c \
+  $(PROJ_DIR)/src/led.c \
+  $(PROJ_DIR)/src/esb.c \
+  $(PROJ_DIR)/src/com_usb.c \
+  $(PROJ_DIR)/src/com_usb_commands.c \
+  $(PROJ_DIR)/src/debug_swo.c \
   $(SDK_ROOT)/modules/nrfx/mdk/gcc_startup_nrf52840.S \
   $(SDK_ROOT)/components/boards/boards.c \
   $(SDK_ROOT)/components/libraries/timer/app_timer.c \
@@ -51,7 +51,7 @@ SRC_FILES += \
 
 # Include folders common to all targets
 INC_FOLDERS += \
-  $(PROJ_DIR) \
+  $(PROJ_DIR)/src \
   $(SDK_ROOT)/components \
   $(SDK_ROOT)/components/toolchain/cmsis/include \
   $(SDK_ROOT)/components/drivers_nrf/nrf_soc_nosd \

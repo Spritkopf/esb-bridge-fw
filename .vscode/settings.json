@@ -1,4 +1,7 @@
 {
     "C_Cpp.workspaceSymbols": "All",
-    "C_Cpp.default.includePath": []
+    "C_Cpp.default.includePath": [],
+    "files.associations": {
+        "app_timer.h": "c"
+    }
 }

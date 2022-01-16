@@ -12,6 +12,7 @@
 #include "com_usb_commands.h"
 #include "timebase.h"
 #include "crc16.h"
+#include "debug_swo.h"
 
 #define CDC_ACM_STARTUP_DELAY_MS 100 
 
@@ -235,6 +236,6 @@ void com_usb_transmit(usb_message_t* message)
     usb_tx_buffer[63] = (uint8_t)((crc>>8) & 0xFF);
 
     /* send data */
-   
+    debug_swo_printf("USB Transmit\n");
     com_usb_tx(&usb_tx_buffer[0],USB_PROTOCOL_PACKET_SIZE);
 }
