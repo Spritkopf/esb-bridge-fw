@@ -9,6 +9,7 @@
 #include "esb.h"
 #include "timebase.h"
 #include "version.h"
+#include "led.h"
 
 #define PAYLOAD_LEN_DYNAMIC 0xFF
 
@@ -84,6 +85,7 @@ void cmd_fct_transfer(const usb_message_t* message, usb_message_t* answer)
     }
     else
     {
+        led_flash_once(LED_ID_G, 30);
         esb_set_pipeline_address(ESB_PIPE_0, message->payload);
         int8_t result = esb_send_packet(ESB_PIPE_0, &(message->payload[5]), (message->payload_len)-5);
         

@@ -31,6 +31,7 @@ static uint8_t esb_listener_address[5] = {0xDE,0xAD,0xBE,0xEF,0x02};
 static void esb_listener_callback(uint8_t *payload, uint8_t payload_length)
 {
     debug_swo_printf("Got incoming message: [ ");
+    led_flash_once(LED_ID_R, 30);
     for(uint8_t i = 0; i<payload_length; i++){
         debug_swo_printf("%02X ", payload[i]);  
 
@@ -87,8 +88,9 @@ void clocks_start( void )
 
     while (NRF_CLOCK->EVENTS_HFCLKSTARTED == 0);
 
-    //nrf_drv_clock_init();
-    //nrf_drv_clock_lfclk_request(NULL);
+    // needed for the app_timer module
+    nrf_drv_clock_init();
+    nrf_drv_clock_lfclk_request(NULL);
 }
 
 
@@ -132,7 +134,6 @@ int main(void)
     /* turn user LED on*/
     led_init();
     led_set_state(LED_ID_STATUS, LED_STATE_ON);
-
     rf_antenna_init();
 
     com_usb_init(com_usb_event_handler);
