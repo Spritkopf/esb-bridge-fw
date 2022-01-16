@@ -13,6 +13,7 @@ $(OUTPUT_DIRECTORY)/esb_bridge.out: \
 SRC_FILES += \
   $(PROJ_DIR)/main.c \
   $(PROJ_DIR)/timebase.c \
+  $(PROJ_DIR)/led.c \
   $(PROJ_DIR)/esb.c \
   $(PROJ_DIR)/com_usb.c \
   $(PROJ_DIR)/com_usb_commands.c \
