@@ -13,7 +13,19 @@ To make use of an ESB bridge device, use the Go package at [](https://github.com
 This is work in progress and not considered functional, as long as this notice exists
 
 ## How to build
+
+### Traditional
 Just clone the project and run `make`. A `gcc-arm-none-eabi` toolchain is needed (`arm-none-eabi-gcc` is expected in PATH). Also the Nordic NRF5 SDK is required,the path can be adjusted with the parameter SDK_ROOT in the Makefile
+
+### Docker
+Clone the project and build the Docker image containing the toolchain:
+```sh
+$ docker build -t arm-gcc:latest .
+```
+The image contains the gcc-arm-none-eabi toolchain and the Nordic SDK
+```sh
+$ docker run --rm -v $(pwd):/workspace arm-gcc make
+```
 
 ## Limitations
 * ESB connection parameters are fixed to suit my application

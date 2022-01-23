@@ -3,7 +3,7 @@ TARGETS          := esb_bridge
 OUTPUT_DIRECTORY := _build
 
 GNU_INSTALL_ROOT := 
-SDK_ROOT := $(HOME)/opt/nrf5x-sdk/nRF5_SDK_17.0.0_9d13099
+SDK_ROOT ?= $(HOME)/opt/nrf5x-sdk/nRF5_SDK_17.0.0_9d13099
 PROJ_DIR := .
 
 $(OUTPUT_DIRECTORY)/esb_bridge.out: \
