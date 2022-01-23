@@ -15,3 +15,7 @@ jobs:
       run: docker build -t arm-gcc:latest .
     - name: Build firmware binaries
       run: docker run --rm --name esb-bridge-fw-build -v $(pwd):/workspace arm-gcc make
+    - uses: actions/upload-artifact@v2
+      with:
+        name: esb_bridge_fw_binary
+        path: _build/esb_bridge.hex
