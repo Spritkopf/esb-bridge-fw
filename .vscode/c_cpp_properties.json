@@ -5,7 +5,7 @@
             "includePath": [
                 "${workspaceFolder}/**",
                 "${default}",
-                "${env:HOME}/opt/nrf5x-sdk/nRF5_SDK_17.0.0_9d13099/**"
+                "lib/nrf5_sdk**"
             ],
             "defines": [
                 "BOARD_PCA10056",
@@ -16,11 +16,11 @@
                 "NRF52840_XXAA",
                 "ENABLE_SWO"
             ],
-            "compilerPath": "${env:HOME}/opt/gnu-mcu-eclipse/arm-none-eabi-gcc/7.3.1-1.1-20180724-0637/bin//arm-none-eabi-gcc",
+            "compilerPath": "${env:HOME}/opt/arm-none-eabi/bin/arm-none-eabi-gcc",
             "cStandard": "gnu11",
             "cppStandard": "gnu++14",
             "intelliSenseMode": "gcc-arm",
-            "browse": {"path": ["${env:HOME}/opt/nrf5x-sdk/nRF5_SDK_17.0.0_9d13099/**"]}
+            "browse": {"path": ["lib/nrf5_sdk**"]}
         }
     ],
     "version": 4
