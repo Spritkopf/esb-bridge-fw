@@ -11,7 +11,7 @@
 #include "com_usb.h"
 #include "com_usb_commands.h"
 #include "timebase.h"
-#include "crc16.h"
+//#include "crc16.h"
 #include "debug_swo.h"
 
 #define CDC_ACM_STARTUP_DELAY_MS 100 
@@ -134,6 +134,19 @@ static void cdc_acm_user_ev_handler(app_usbd_class_inst_t const *p_inst, app_usb
     }
 }
 
+/*! \brief implementation of a CRC16 CCITT/FALSE*/
+static uint16_t crc16(uint8_t* p_data, uint32_t length)
+{
+    uint8_t i;
+    uint16_t crc = 0xffff;
+    while (length--) {
+        crc ^= *(uint8_t *)p_data++ << 8;
+        for (i=0; i < 8; i++)
+            crc = crc & 0x8000 ? (crc << 1) ^ 0x1021 : crc << 1;
+    }
+    return crc & 0xffff;
+}
+
 /******************************************************************************
  *                              GLOBAL FUNCTIONS                              *
  ******************************************************************************/
@@ -173,7 +186,7 @@ void com_usb_process(void)
         usb_rx_available = 0;
         
         /* check CRC16 */
-        uint16_t crc = crc16_compute((void*)usb_rx_buffer, USB_PROTOCOL_PACKET_SIZE-USB_PROTOCOL_CHECKSUM_SIZE,NULL);
+        uint16_t crc = crc16((void*)usb_rx_buffer, USB_PROTOCOL_PACKET_SIZE-USB_PROTOCOL_CHECKSUM_SIZE);
         received_message.crc16 = *(uint16_t*)&usb_rx_buffer[USB_PROTOCOL_PACKET_SIZE-USB_PROTOCOL_CHECKSUM_SIZE];
         if(crc != received_message.crc16)
         {
@@ -231,7 +244,7 @@ void com_usb_transmit(usb_message_t* message)
     usb_tx_buffer[2] = message->error;
     usb_tx_buffer[3] = message->payload_len;
     memcpy(&usb_tx_buffer[4], message->payload, 58);
-    crc = crc16_compute((void*)usb_tx_buffer, USB_PROTOCOL_PACKET_SIZE-USB_PROTOCOL_CHECKSUM_SIZE,NULL);
+    crc = crc16((void*)usb_tx_buffer, USB_PROTOCOL_PACKET_SIZE-USB_PROTOCOL_CHECKSUM_SIZE);
     usb_tx_buffer[62] = (uint8_t)(crc & 0xFF);
     usb_tx_buffer[63] = (uint8_t)((crc>>8) & 0xFF);
 
