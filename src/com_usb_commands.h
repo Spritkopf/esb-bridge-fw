@@ -6,12 +6,13 @@
 
 typedef enum
 {
-    CMD_VERSION     = 0x10,   /* Get firmware version */
-    CMD_TRANSFER    = 0x30,
-    CMD_SEND        = 0x31,   /* Send a message */
-    CMD_TEST        = 0x61,   /* test command, do not use */
-    CMD_IRQ         = 0x80,   /* interrupt callback, only from device to host */
-    CMD_RX          = 0x81,   /* callback from incoming ESB message */
+    CMD_VERSION         = 0x10,   /* Get firmware version */
+    CMD_TRANSFER        = 0x30,
+    CMD_SEND            = 0x31,   /* Send a message */
+    CMD_SET_RX_ADDR     = 0x32,   /* Set pipeline address for listening for incoming ESB messages*/
+    CMD_TEST            = 0x61,   /* test command, do not use */
+    CMD_IRQ             = 0x80,   /* interrupt callback, only from device to host */
+    CMD_RX              = 0x81,   /* callback from incoming ESB message, only from device to host */
 } usb_cmd_t;
 
 /*

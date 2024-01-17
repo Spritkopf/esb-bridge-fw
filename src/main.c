@@ -26,6 +26,7 @@
 
 static uint8_t g_usb_rx_ready = 0;
 
+/* default listener address, should be set individually by host client via CMD_SET_RX_ADDR */
 static uint8_t esb_listener_address[5] = {0xDE,0xAD,0xBE,0xEF,0x02};
 
 static void esb_listener_callback(uint8_t *payload, uint8_t payload_length)

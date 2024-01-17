@@ -3,10 +3,17 @@
 SEARCH_DIR(.)
 GROUP(-lgcc -lc -lnosys)
 
+__start_flash = 0x0;
+__size_flash = 0x80000;
+__size_app_data = 0x1000;
+__start_ram = 0x20000000;
+__size_ram = 0x40000;
+
 MEMORY
 {
-  FLASH (rx) : ORIGIN = 0x0, LENGTH = 0x100000
-  RAM (rwx) :  ORIGIN = 0x20000000, LENGTH = 0x40000
+  FLASH (rx) :  ORIGIN = __start_flash, LENGTH = __size_flash - __size_app_data
+  APP_DATA(rx): ORIGIN = __start_flash + __size_flash - __size_app_data, LENGTH = __size_app_data
+  RAM (rwx) :   ORIGIN = __start_ram, LENGTH = __size_ram
 }
 
 SECTIONS
@@ -60,5 +67,13 @@ SECTIONS
 
 } INSERT AFTER .text
 
+SECTIONS {
+  .app_data :
+  {
+    PROVIDE(__start_app_data = .);
+    . = . + __size_app_data;
+    PROVIDE(__end_app_data = .);
+  } > APP_DATA
+}
 
 INCLUDE "nrf_common.ld"

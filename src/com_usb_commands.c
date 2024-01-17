@@ -119,8 +119,6 @@ void cmd_fct_transfer(const usb_message_t* message, usb_message_t* answer)
  * The message payload has the target address in the first 5 bytes, afterwards the payload
  * minimum payload size: 6 bytes (address + at least 1 payload byte)
  * answer error: E_OK if OK, otherwise E_ESB
- * 
- * Note: set TX address beforehand with command CMD_SET_TX_ADDR
  */
 void cmd_fct_send(const usb_message_t* message, usb_message_t* answer)
 {
@@ -141,14 +139,12 @@ void cmd_fct_send(const usb_message_t* message, usb_message_t* answer)
     return;
 }
 
-/* Set address of specific RX Pipeline
- * paxload[0]: rx pipeline number
- * payload[1-5]:    5 bytes RX pipeline address
+/* Set address on which to listen for incoming ESB messages (Central Address)
+ * payload[0-5]:    5 bytes RX pipeline address
  * No answer payload
  */
 void cmd_fct_set_rx_addr(const usb_message_t* message, usb_message_t* answer)
 {
-    /* coming soon */
 
     answer->error = 0;    
 
@@ -165,6 +161,7 @@ cmd_table_item_t cmd_table[] =
     {CMD_VERSION,       0,                    cmd_fct_get_version},
     {CMD_TRANSFER,      PAYLOAD_LEN_DYNAMIC,  cmd_fct_transfer},
     {CMD_SEND,          PAYLOAD_LEN_DYNAMIC,  cmd_fct_send},
+    {CMD_SET_RX_ADDR,   5,                    cmd_fct_set_rx_addr},
 
     
     /* last entry NULL-terminator */
