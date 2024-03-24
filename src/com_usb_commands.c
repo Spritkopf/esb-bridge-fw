@@ -21,6 +21,26 @@ static volatile uint8_t g_esb_answer_received = 0;
 static volatile uint8_t g_esb_answer_payload[NRF_ESB_MAX_PAYLOAD_LENGTH];
 static volatile uint8_t g_esb_answer_payload_len = 0;
 
+/* Callback for incoming messages. relays the ESB message to the host */
+void esb_listener_callback(uint8_t *payload, uint8_t payload_length)
+{
+    debug_swo_printf("Got incoming message: [ ");
+    led_flash_once(LED_ID_R, 30);
+    for(uint8_t i = 0; i<payload_length; i++){
+        debug_swo_printf("%02X ", payload[i]);  
+
+    }
+    debug_swo_printf("]\n");  
+    usb_message_t msg = {
+        .cmd = CMD_RX,
+        .error = E_OK,
+        .payload_len=payload_length
+    };
+    memcpy(msg.payload, payload, payload_length);
+
+    com_usb_transmit(&msg);
+}
+
 static void answer_callback(uint8_t *payload, uint8_t payload_length)
 {
     debug_swo_printf("Got an answer!: [ ");
@@ -141,14 +161,18 @@ void cmd_fct_send(const usb_message_t* message, usb_message_t* answer)
     return;
 }
 
-/* Set address of specific RX Pipeline
- * paxload[0]: rx pipeline number
- * payload[1-5]:    5 bytes RX pipeline address
+/* Set address of RX Pipeline
+ * payload[0-4]:    5 bytes RX pipeline address
  * No answer payload
+ * 
+ * Note: This command must be executed in order to receive incoming messages.
+ *       There is no default RX Pipeline address
  */
 void cmd_fct_set_rx_addr(const usb_message_t* message, usb_message_t* answer)
 {
-    /* coming soon */
+    esb_stop_listening(ESB_PIPE_1);
+    esb_set_pipeline_address(ESB_PIPE_1, message->payload);
+    esb_start_listening(ESB_PIPE_1, esb_listener_callback);
 
     answer->error = 0;    
 

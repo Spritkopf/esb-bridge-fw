@@ -26,27 +26,9 @@
 
 static uint8_t g_usb_rx_ready = 0;
 
-static uint8_t esb_listener_address[5] = {0xDE,0xAD,0xBE,0xEF,0x02};
 
-static void esb_listener_callback(uint8_t *payload, uint8_t payload_length)
-{
-    debug_swo_printf("Got incoming message: [ ");
-    led_flash_once(LED_ID_R, 30);
-    for(uint8_t i = 0; i<payload_length; i++){
-        debug_swo_printf("%02X ", payload[i]);  
 
-    }
-    debug_swo_printf("]\n");  
-    usb_message_t msg = {
-        .cmd = CMD_RX,
-        .error = E_OK,
-        .payload_len=payload_length
-    };
-    memcpy(msg.payload, payload, payload_length);
-
-    com_usb_transmit(&msg);
-}
-
+/* Handler for  USB events*/
 static void com_usb_event_handler(com_usb_evt_type_t evt_type)
 {
     switch(evt_type){
@@ -63,7 +45,7 @@ static void com_usb_event_handler(com_usb_evt_type_t evt_type)
     }
 }
 
-
+/* Handler for the user button, used for testing */
 static void button_handler(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t action){
     debug_swo_printf("BUTTON PRESSED\n");
 
@@ -81,6 +63,7 @@ static void button_handler(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t action){
 }
 
 
+/* Configure the clock */
 void clocks_start( void )
 {
     NRF_CLOCK->EVENTS_HFCLKSTARTED = 0;
@@ -94,6 +77,7 @@ void clocks_start( void )
 }
 
 
+/* Setup GPIO for the user button*/
 void gpio_init( void )
 {
     nrfx_gpiote_pin_t button_pin = NRF_GPIO_PIN_MAP(0, 11);
@@ -106,6 +90,10 @@ void gpio_init( void )
     
 }
 
+
+/* Enable PCB Antenna
+ * TODO: THis is specific to the "Particle" board used for development, move to board-support layer
+*/
 void rf_antenna_init(void)
 {
     nrf_gpio_cfg_output(NRF_GPIO_PIN_MAP(0, 24));
@@ -140,8 +128,7 @@ int main(void)
     (void)com_usb_event_handler,
 
     err_code = esb_init();
-    esb_set_pipeline_address(ESB_PIPE_1, esb_listener_address);
-    esb_start_listening(ESB_PIPE_1, esb_listener_callback);
+
 	while (true)
 	{
         if(g_usb_rx_ready == 1){
