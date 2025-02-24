@@ -7,8 +7,6 @@
 #include "nrf_esb.h"
 #include "nrf_error.h"
 #include "nrf_esb_error_codes.h"
-#include "nrf_delay.h"
-#include "nrf_gpio.h"
 #include "boards.h"
 #include "nrf_delay.h"
 #include "app_util.h"
@@ -53,12 +51,17 @@ static void button_handler(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t action){
     usb_message_t msg = {
         .cmd = CMD_IRQ,
         .error = E_OK,
-        .payload_len=3,
+        .payload_len=5 + 3,
     };
-    msg.payload[0] = 1;
-    msg.payload[1] = 2;
-    msg.payload[2] = 3;
+    msg.payload[0] = 0xde;
+    msg.payload[1] = 0xad;
+    msg.payload[2] = 0xbe;
+    msg.payload[3] = 0xef;
+    msg.payload[4] = 1;
 
+    msg.payload[5] = 0xAA;
+    msg.payload[6] = 0xBB;
+    msg.payload[7] = 0xCC;
     com_usb_transmit(&msg);
 }
 

@@ -91,7 +91,7 @@ void cmd_fct_get_version(const usb_message_t* message, usb_message_t* answer)
 
 /* Transfer a ESB package and return the answer payload
  * The message payload has the target address in the first 5 bytes, afterwards the payload
- * minimum payload size: 6 bytes (address + at least 1 payload byte)
+ * minimum payload size: 6 bytes (address + at least 1 payload byte for the command)
  * answer payload: answer payload
  * answer error: E_OK if OK, otherwise E_ESB
  * 
@@ -105,6 +105,12 @@ void cmd_fct_transfer(const usb_message_t* message, usb_message_t* answer)
     }
     else
     {
+        debug_swo_printf("Sending message: ADDR %02x:%02x:%02x:%02x:%02x [", message->payload[0],message->payload[1],message->payload[2],message->payload[3],message->payload[4]);
+        for(uint8_t i=0; i < message->payload_len - 5; i++){
+            debug_swo_printf(" %02x ",message->payload[i+5]);
+        }
+        debug_swo_printf("]\n");
+
         led_flash_once(LED_ID_G, 30);
         esb_set_pipeline_address(ESB_PIPE_0, message->payload);
         int8_t result = esb_send_packet(ESB_PIPE_0, &(message->payload[5]), (message->payload_len)-5);
@@ -139,8 +145,6 @@ void cmd_fct_transfer(const usb_message_t* message, usb_message_t* answer)
  * The message payload has the target address in the first 5 bytes, afterwards the payload
  * minimum payload size: 6 bytes (address + at least 1 payload byte)
  * answer error: E_OK if OK, otherwise E_ESB
- * 
- * Note: set TX address beforehand with command CMD_SET_TX_ADDR
  */
 void cmd_fct_send(const usb_message_t* message, usb_message_t* answer)
 {
@@ -189,6 +193,7 @@ cmd_table_item_t cmd_table[] =
     {CMD_VERSION,       0,                    cmd_fct_get_version},
     {CMD_TRANSFER,      PAYLOAD_LEN_DYNAMIC,  cmd_fct_transfer},
     {CMD_SEND,          PAYLOAD_LEN_DYNAMIC,  cmd_fct_send},
+    {CMD_SET_RX_ADDR,   5,                    cmd_fct_set_rx_addr},
 
     
     /* last entry NULL-terminator */
